@@ -10,20 +10,10 @@
   --ticker-height: 1.55rem;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-rajdhani);
-  --font-mono: var(--font-geist-mono);
-}
-
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(140% 120% at 8% 0%, rgba(34, 231, 255, 0.17), transparent 46%),
-    radial-gradient(100% 100% at 88% 12%, rgba(255, 74, 216, 0.17), transparent 40%),
-    linear-gradient(180deg, #050916 0%, #040714 55%, #03050f 100%);
+  background: linear-gradient(180deg, #050916 0%, #040714 55%, #03050f 100%);
   color: var(--foreground);
   font-family: var(--font-rajdhani), "Segoe UI", sans-serif;
 }
@@ -84,7 +74,7 @@ body {
 .hero {
   position: relative;
   min-height: 100vh;
-  padding: 4.4rem 1.4rem 4.2rem;
+  padding: 2.1rem 1.4rem 4.2rem;
   display: grid;
   grid-template-columns: 13.8rem minmax(0, 1fr);
   grid-template-rows: auto auto auto auto;
@@ -111,34 +101,31 @@ body {
 }
 
 .brand-row {
-  grid-column: 1 / -1;
-  position: relative;
-  z-index: 60;
+  position: sticky;
+  top: var(--ticker-height);
+  z-index: 49;
   overflow: visible;
-  display: block;
-  min-height: 2.6rem;
-}
-
-.brand-mark {
-  margin: 0;
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-family: var(--font-orbitron), "Segoe UI", sans-serif;
-  font-size: clamp(1.4rem, 2.8vw, 1.95rem);
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: #f4f8ff;
-  text-shadow:
-    1px 0 0 var(--pink),
-    -1px 0 0 var(--cyan),
-    0 0 18px rgba(87, 136, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  min-height: 3.1rem;
+  margin-top: var(--ticker-height);
+  padding: 0.9rem 1.4rem 0.85rem;
+  border-bottom: 0;
+  background: none;
+  background-color: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
 }
 
 .brand-logo {
+  position: static;
   height: auto;
   width: clamp(100px, 12vw, 180px);
   object-fit: contain;
+  display: block;
+  flex-shrink: 0;
 }
 
 .main-nav {
@@ -146,7 +133,8 @@ body {
   grid-template-columns: repeat(3, minmax(0, auto)) 88px 88px;
   align-items: center;
   position: relative;
-  width: min(760px, calc(100% - 16.4rem));
+  width: 100%;
+  max-width: 760px;
   margin-left: auto;
   margin-right: 0;
   z-index: 65;
@@ -249,14 +237,25 @@ body {
   margin-top: 0.35rem;
 }
 
-.mega-column a {
+.mega-column a,
+.mega-link {
   color: #d8e8ff;
-  text-decoration: none;
   font-size: 0.9rem;
   line-height: 1.25;
 }
 
-.mega-column a:hover {
+.mega-link {
+  border: 0;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  font-family: var(--font-rajdhani), "Segoe UI", sans-serif;
+  cursor: pointer;
+}
+
+.mega-column a:hover,
+.mega-link:hover {
   color: #e8fcff;
   text-shadow: 0 0 10px rgba(34, 231, 255, 0.45);
 }
@@ -791,7 +790,6 @@ body {
     inset: 7.2rem 8rem 11rem;
   }
 
-  .brand-row,
   .hero-copy,
   .product-strip,
   .catalog-section {
@@ -827,7 +825,7 @@ body {
 
 @media (max-width: 760px) {
   .hero {
-    padding-top: 4rem;
+    padding-top: 1.25rem;
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
     gap: 0.9rem;
@@ -840,11 +838,10 @@ body {
   .brand-row {
     display: grid;
     gap: 0.6rem;
+    justify-content: stretch;
     min-height: auto;
-  }
-
-  .brand-mark {
-    position: static;
+    background-color: transparent;
+    padding: 0.65rem 0.75rem 0.7rem;
   }
 
   .main-nav {
@@ -925,10 +922,6 @@ body {
 
   .hero::after {
     inset: 6.3rem 2.6% 25.5rem;
-  }
-
-  .brand-mark {
-    font-size: 1.12rem;
   }
 
   .floating-card {

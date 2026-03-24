@@ -321,17 +321,16 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="hero" aria-label="Glitched accessories store">
-        <header className="brand-row">
-          <Image
-  src="/glitched-logo2.png"
-  alt="Glitched logo"
-  width={160}
-  height={60}
-  priority
-  className="brand-logo"
-/>
-          <nav className="main-nav" aria-label="Main navigation" onMouseLeave={() => setOpenMenuIndex(null)}>
+      <header className="brand-row">
+        <Image
+          src="/glitched-logo4.png"
+          alt="Glitched logo"
+          width={160}
+          height={60}
+          priority
+          className="brand-logo"
+        />
+        <nav className="main-nav" aria-label="Main navigation" onMouseLeave={() => setOpenMenuIndex(null)}>
             {navMenus.map((menu, index) => (
               <button
                 key={menu.title}
@@ -361,7 +360,9 @@ export default function Home() {
                     <ul>
                       {column.links.map((link) => (
                         <li key={link}>
-                          <a href="#">{link}</a>
+                          <button type="button" className="mega-link">
+                            {link}
+                          </button>
                         </li>
                       ))}
                     </ul>
@@ -369,8 +370,10 @@ export default function Home() {
                 ))}
               </div>
             )}
-          </nav>
-        </header>
+        </nav>
+      </header>
+
+      <section className="hero" aria-label="Glitched accessories store">
 
         {showQuickLinks && (
           <aside className="floating-card" aria-label="Quick links">
@@ -384,10 +387,18 @@ export default function Home() {
             </button>
             <h2>Build Your Battle Station.</h2>
             <p>High-performance desk gear engineered for speed, focus, and late-night grind.</p>
-            <button type="button" onClick={() => handleCategoryChange("Keyboards")}>Shop Keyboards</button>
-            <button type="button" onClick={() => handleCategoryChange("Mice")}>Shop Mice</button>
-            <button type="button" onClick={() => handleCategoryChange("Audio")}>Audio + ANC</button>
-            <button type="button" onClick={() => handleCategoryChange("Power + Docks")}>Power + Docks</button>
+            <button type="button" onClick={() => handleCategoryChange("Keyboards")}>
+              Shop Keyboards
+            </button>
+            <button type="button" onClick={() => handleCategoryChange("Mice")}>
+              Shop Mice
+            </button>
+            <button type="button" onClick={() => handleCategoryChange("Audio")}>
+              Audio + ANC
+            </button>
+            <button type="button" onClick={() => handleCategoryChange("Power + Docks")}>
+              Power + Docks
+            </button>
           </aside>
         )}
 
