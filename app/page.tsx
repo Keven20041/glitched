@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+import { addCartItem, getCartCount } from "./lib/cart";
 
 type Product = {
   name: string;
@@ -214,6 +216,7 @@ const products: Product[] = [
 const shopCategories = ["All", "Mice", "Keyboards", "Audio", "Power + Docks", "Mousepads", "Streaming"];
 
 const parsePrice = (price: string) => Number(price.replace("$", ""));
+const toProductSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 export default function Home() {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
@@ -223,7 +226,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("featured");
-  const [cartCount, setCartCount] = useState(0);
+  const [cartCount, setCartCount] = useState(() => getCartCount());
   const [lastAdded, setLastAdded] = useState("");
 
   const handleCategoryChange = (category: string) => {
@@ -231,8 +234,14 @@ export default function Home() {
     setFeaturedProduct(0);
   };
 
-  const handleAddToCart = (name: string) => {
-    setCartCount((prev) => prev + 1);
+  const handleAddToCart = (name: string, price: string) => {
+    addCartItem({
+      id: toProductSlug(name),
+      name,
+      price: parsePrice(price),
+      quantity: 1,
+    });
+    setCartCount(getCartCount());
     setLastAdded(name);
   };
 
@@ -305,6 +314,18 @@ export default function Home() {
     return () => clearTimeout(timeout);
   }, [lastAdded]);
 
+  useEffect(() => {
+    const syncCartCount = () => {
+      setCartCount(getCartCount());
+    };
+
+    window.addEventListener("glitched-cart-updated", syncCartCount);
+
+    return () => {
+      window.removeEventListener("glitched-cart-updated", syncCartCount);
+    };
+  }, []);
+
   const activeMenu = openMenuIndex !== null ? navMenus[openMenuIndex] : null;
 
   return (
@@ -345,12 +366,12 @@ export default function Home() {
                 {menu.title}
               </button>
             ))}
-            <button type="button" className="utility-link" aria-label="Search">
+            <a href="#catalog" className="utility-link" aria-label="Jump to catalog">
               Search
-            </button>
-            <button type="button" className="utility-link" aria-label="Cart">
+            </a>
+            <Link href="/cart" className="utility-link" aria-label="Open cart">
               Cart <span className="cart-count">{cartCount}</span>
-            </button>
+            </Link>
 
             {activeMenu && (
               <div className="mega-menu" role="menu" aria-label={`${activeMenu.title} submenu`}>
@@ -435,14 +456,16 @@ export default function Home() {
               onMouseEnter={() => setFeaturedProduct(index)}
             >
               <p className="tag">{item.tag}</p>
-              <h2>{item.name}</h2>
+              <h2>
+                <Link href={`/products/${toProductSlug(item.name)}`}>{item.name}</Link>
+              </h2>
               <p>{item.description}</p>
               <div className="meter" aria-hidden="true">
                 <span style={{ width: item.meter }} />
               </div>
               <div className="product-row">
                 <strong>{item.price}</strong>
-                <button type="button" onClick={() => handleAddToCart(item.name)}>
+                <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
                   Add
                 </button>
               </div>
@@ -450,7 +473,7 @@ export default function Home() {
           ))}
         </section>
 
-        <section className="catalog-section" aria-label="Tech accessory catalog">
+        <section id="catalog" className="catalog-section" aria-label="Tech accessory catalog">
           <header className="catalog-header">
             <h2>Browse By Gear Type</h2>
             <p>Click a category to view every matching item in the catalog.</p>
@@ -507,7 +530,7 @@ export default function Home() {
                 <p className="catalog-description">{item.description}</p>
                 <div className="catalog-row">
                   <strong>{item.price}</strong>
-                  <button type="button" onClick={() => handleAddToCart(item.name)}>
+                  <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
                     Add To Cart
                   </button>
                 </div>
