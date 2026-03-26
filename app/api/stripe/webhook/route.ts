@@ -81,8 +81,23 @@ export async function POST(request: Request) {
     limit: 100,
   });
 
-  const shipping = session.shipping_details;
-  const address = shipping?.address;
+  const customerDetails = session.customer_details;
+  const shipping = (
+    session as Stripe.Checkout.Session & {
+      shipping_details?: {
+        name?: string | null;
+        address?: {
+          line1?: string | null;
+          line2?: string | null;
+          city?: string | null;
+          state?: string | null;
+          postal_code?: string | null;
+          country?: string | null;
+        } | null;
+      } | null;
+    }
+  ).shipping_details;
+  const address = customerDetails?.address ?? shipping?.address;
 
   const orderRef =
     session.client_reference_id ??
@@ -105,9 +120,9 @@ export async function POST(request: Request) {
         ? session.payment_intent
         : session.payment_intent?.id,
     address: {
-      name: shipping?.name ?? session.metadata?.fullName ?? "Customer",
-      email: session.customer_details?.email ?? undefined,
-      phone: session.customer_details?.phone ?? undefined,
+      name: customerDetails?.name ?? shipping?.name ?? session.metadata?.fullName ?? "Customer",
+      email: customerDetails?.email ?? undefined,
+      phone: customerDetails?.phone ?? undefined,
       line1: address?.line1 ?? session.metadata?.address ?? undefined,
       line2: address?.line2 ?? undefined,
       city: address?.city ?? session.metadata?.city ?? undefined,
@@ -126,9 +141,9 @@ export async function POST(request: Request) {
         ? session.payment_intent
         : session.payment_intent?.id,
     customer: {
-      fullName: shipping?.name ?? session.metadata?.fullName ?? "Customer",
-      email: session.customer_details?.email ?? undefined,
-      phone: session.customer_details?.phone ?? undefined,
+      fullName: customerDetails?.name ?? shipping?.name ?? session.metadata?.fullName ?? "Customer",
+      email: customerDetails?.email ?? undefined,
+      phone: customerDetails?.phone ?? undefined,
       address:
         address?.line1 ??
         session.metadata?.address ??
