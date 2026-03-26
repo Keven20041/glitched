@@ -19,7 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GLITCHED. Store",
+  title: "GLITCHED",
   description: "GLITCHED. performance tech accessories storefront",
 };
 

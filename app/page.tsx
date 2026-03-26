@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { addCartItem, getCartCount } from "./lib/cart";
+import { catalogProducts } from "./lib/catalog";
 
 type Product = {
+  slug: string;
   name: string;
   category: string;
   type: string;
@@ -13,6 +15,28 @@ type Product = {
   price: string;
   description: string;
   meter: string;
+  image?: string;
+  secondaryImage?: string;
+  rating: number;
+  reviews: number;
+  badge: string;
+};
+
+type ChatMessage = {
+  id: number;
+  role: "bot" | "user";
+  text: string;
+  picks?: Product[];
+  followUps?: string[];
+};
+
+type SetupBundle = {
+  id: string;
+  title: string;
+  description: string;
+  itemSlugs: string[];
+  savings: number;
+  badge: string;
 };
 
 const navMenus = [
@@ -25,7 +49,7 @@ const navMenus = [
       },
       {
         heading: "Popular",
-        links: ["Specter Series", "Vector Boards", "Creator Essentials", "Desk Setup Kits"],
+        links: ["Superlight 2", "Wooting 60HE+", "Cloud III", "Anker Hubs"],
       },
     ],
   },
@@ -66,157 +90,69 @@ const tickerItems = [
   "LOW-LATENCY PERFORMANCE GEAR",
 ];
 
-const products: Product[] = [
+const products: Product[] = catalogProducts.map((item, index) => {
+  const meterScore = Number.parseInt(item.meter, 10);
+  const rating = Math.min(5, Math.max(4.1, Number((4.1 + (meterScore - 70) / 20).toFixed(1))));
+  const badge = meterScore >= 92 ? "Top Pick" : meterScore >= 88 ? "Best Value" : "Popular";
+
+  return {
+    slug: item.slug,
+    name: item.name,
+    category: item.category,
+    type: item.type,
+    tag: item.tag,
+    price: item.price,
+    description: item.description,
+    meter: item.meter,
+    image: item.image,
+    secondaryImage: item.image,
+    rating,
+    reviews: 420 + index * 137,
+    badge,
+  };
+});
+
+const setupBundles: SetupBundle[] = [
   {
-    name: "Specter 8K Mouse",
-    category: "Mice",
-    type: "Wireless",
-    tag: "Best Seller",
-    price: "$79",
-    description: "Ultra-light shell, 8K polling, and magnetic side grips for ranked play.",
-    meter: "89%",
+    id: "fps-kit",
+    title: "FPS Starter Kit",
+    description: "Low-latency essentials for fast aim and stable tracking.",
+    itemSlugs: ["logitech-g305-lightspeed", "wooting-60he", "steelseries-qck-heavy-xxl"],
+    savings: 18,
+    badge: "Competitive",
   },
   {
-    name: "Cipher Mini Mouse",
-    category: "Mice",
-    type: "Claw Grip",
-    tag: "New",
-    price: "$69",
-    description: "Compact shell with optical switches and low-friction skates for fast flicks.",
-    meter: "77%",
+    id: "creator-kit",
+    title: "Creator Streaming Kit",
+    description: "Dialed-in audio, camera, and lighting for clean streams.",
+    itemSlugs: ["fifine-am8-dynamic-microphone", "logitech-c922-pro-stream-webcam", "elgato-key-light-air"],
+    savings: 24,
+    badge: "Creator",
   },
   {
-    name: "Axiom Ergo Mouse",
-    category: "Mice",
-    type: "Ergonomic",
-    tag: "Work + Play",
-    price: "$89",
-    description: "Split-angle ergonomic form with programmable side dial and silent clicks.",
-    meter: "71%",
-  },
-  {
-    name: "Vector 75 Keyboard",
-    category: "Keyboards",
-    type: "75%",
-    tag: "Drop 03",
-    price: "$149",
-    description: "Hot-swappable 75% board with gasket mount and low-latency wireless mode.",
-    meter: "72%",
-  },
-  {
-    name: "Nova TKL Keyboard",
-    category: "Keyboards",
-    type: "TKL",
-    tag: "Tournament",
-    price: "$129",
-    description: "Tenkeyless aluminum board tuned for rapid actuation and stable key feel.",
-    meter: "68%",
-  },
-  {
-    name: "Pulse 60 Keyboard",
-    category: "Keyboards",
-    type: "60%",
-    tag: "Compact",
-    price: "$119",
-    description: "Portable 60% layout with per-key RGB and triple-device Bluetooth pairing.",
-    meter: "64%",
-  },
-  {
-    name: "GhostLoop Earbuds",
-    category: "Audio",
-    type: "Earbuds",
-    tag: "New",
-    price: "$109",
-    description: "Gaming-tuned ANC earbuds with 35-hour battery and dual device pairing.",
-    meter: "64%",
-  },
-  {
-    name: "EchoFrame Headset",
-    category: "Audio",
-    type: "Headset",
-    tag: "Spatial",
-    price: "$139",
-    description: "Closed-back headset with detachable boom mic and low-latency 2.4G dongle.",
-    meter: "73%",
-  },
-  {
-    name: "VibeMic USB",
-    category: "Audio",
-    type: "Microphone",
-    tag: "Creator",
-    price: "$99",
-    description: "USB-C condenser mic with tap mute, gain dial, and cardioid recording mode.",
-    meter: "69%",
-  },
-  {
-    name: "FluxDock 7-in-1",
-    category: "Power + Docks",
-    type: "Dock",
-    tag: "Creator Pick",
-    price: "$89",
-    description: "USB-C dock with HDMI 4K60, ethernet, PD passthrough, and SD transfer.",
-    meter: "81%",
-  },
-  {
-    name: "VoltCore 20K",
-    category: "Power + Docks",
-    type: "Power Bank",
-    tag: "Fast Charge",
-    price: "$74",
-    description: "20,000mAh battery with dual USB-C PD outputs and onboard power display.",
-    meter: "75%",
-  },
-  {
-    name: "ArcCharge GaN 120W",
-    category: "Power + Docks",
-    type: "Wall Charger",
-    tag: "GaN",
-    price: "$65",
-    description: "Compact multi-port GaN charger for laptop, tablet, and phone fast charging.",
-    meter: "80%",
-  },
-  {
-    name: "Glide XL Mousepad",
-    category: "Mousepads",
-    type: "Control",
-    tag: "Desk Mat",
-    price: "$35",
-    description: "Extended control surface with stitched edges and anti-slip natural rubber base.",
-    meter: "66%",
-  },
-  {
-    name: "Slipstream Speedpad",
-    category: "Mousepads",
-    type: "Speed",
-    tag: "Esports",
-    price: "$39",
-    description: "Low-friction speed surface tuned for low-DPI tracking and rapid flick shots.",
-    meter: "63%",
-  },
-  {
-    name: "Orbit Cam 4K",
-    category: "Streaming",
-    type: "Webcam",
-    tag: "Streaming",
-    price: "$119",
-    description: "4K webcam with auto-light correction and magnetic privacy cover.",
-    meter: "70%",
-  },
-  {
-    name: "Beam Key Light",
-    category: "Streaming",
-    type: "Lighting",
-    tag: "Studio",
-    price: "$89",
-    description: "Edge-lit key light with app presets for warm, neutral, and cool scenes.",
-    meter: "67%",
+    id: "travel-kit",
+    title: "Travel Desk Kit",
+    description: "Portable setup stack for work sessions and game nights on the move.",
+    itemSlugs: ["keychron-k2-pro", "anker-5-in-1-usb-c-hub", "baseus-blade-20000mah-65w-power-bank"],
+    savings: 15,
+    badge: "Portable",
   },
 ];
 
 const shopCategories = ["All", "Mice", "Keyboards", "Audio", "Power + Docks", "Mousepads", "Streaming"];
+const assistantQuickPrompts = [
+  "Gaming setup under $250",
+  "Compact desk setup for work",
+  "Streaming starter setup",
+  "Travel-friendly accessories",
+];
 
 const parsePrice = (price: string) => Number(price.replace("$", ""));
 const toProductSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+const byTopMeter = (items: Product[]) => {
+  return [...items].sort((a, b) => Number.parseInt(b.meter, 10) - Number.parseInt(a.meter, 10));
+};
 
 export default function Home() {
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
@@ -226,8 +162,137 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("featured");
-  const [cartCount, setCartCount] = useState(() => getCartCount());
+  const [cartCount, setCartCount] = useState(0);
   const [lastAdded, setLastAdded] = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [availableQuickPrompts, setAvailableQuickPrompts] = useState(assistantQuickPrompts);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+    {
+      id: 1,
+      role: "bot",
+      text:
+        "I can help pick your setup. Tell me your goal, budget, and vibe (gaming, work, creator, streaming, travel), and I will suggest a stack.",
+    },
+  ]);
+
+  const productBySlug = useMemo(() => {
+    return new Map(products.map((item) => [item.slug, item]));
+  }, []);
+
+  const getAssistantReply = (prompt: string): Omit<ChatMessage, "id"> => {
+    const lower = prompt.toLowerCase();
+    const budgetMatch = lower.match(/\$?\s*(\d{2,4})/);
+    const budget = budgetMatch ? Number(budgetMatch[1]) : null;
+
+    const wantsGaming = /game|gaming|rank|fps|esports|latency/.test(lower);
+    const wantsWork = /work|office|productivity|coding|focus/.test(lower);
+    const wantsCreator = /creator|content|video|record|podcast|editing/.test(lower);
+    const wantsStreaming = /stream|camera|webcam|light|mic/.test(lower);
+    const wantsTravel = /travel|portable|compact|small|lightweight/.test(lower);
+    const wantsQuiet = /quiet|silent/.test(lower);
+
+    const requestedCategory = shopCategories.find(
+      (category) => category !== "All" && lower.includes(category.toLowerCase()),
+    );
+
+    const scored = products.map((item) => {
+      let score = 0;
+      const itemText = `${item.name} ${item.category} ${item.type} ${item.tag} ${item.description}`.toLowerCase();
+      const price = parsePrice(item.price);
+
+      if (requestedCategory && item.category === requestedCategory) {
+        score += 6;
+      }
+
+      if (wantsGaming && /mouse|keyboard|headset|earbuds|esports|tournament|latency/.test(itemText)) {
+        score += 3;
+      }
+
+      if (wantsWork && /ergonomic|dock|power bank|charger|keyboard|control/.test(itemText)) {
+        score += 3;
+      }
+
+      if (wantsCreator && /microphone|dock|light|webcam|audio|creator/.test(itemText)) {
+        score += 3;
+      }
+
+      if (wantsStreaming && /streaming|webcam|lighting|microphone|headset/.test(itemText)) {
+        score += 4;
+      }
+
+      if (wantsTravel && /compact|portable|60%|earbuds|power bank|charger/.test(itemText)) {
+        score += 3;
+      }
+
+      if (wantsQuiet && /silent|earbuds|closed-back/.test(itemText)) {
+        score += 2;
+      }
+
+      if (budget !== null) {
+        score += price <= budget ? 3 : -2;
+      }
+
+      return { item, score };
+    });
+
+    const relevant = scored.filter((entry) => entry.score > 0);
+    const top = (relevant.length > 0 ? relevant : scored)
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.item)
+      .slice(0, 3);
+
+    const picks = top.length > 0 ? top : byTopMeter(products).slice(0, 3);
+    const total = picks.reduce((sum, item) => sum + parsePrice(item.price), 0);
+    const guidance =
+      budget === null
+        ? `Recommended 3-piece setup total: $${total}. Share a budget and I can tune this tighter.`
+        : `Recommended 3-piece setup total: $${total}. ${
+            total <= budget ? "This is inside your target budget." : "This is above your budget, so I prioritized performance first."
+          }`;
+
+    const followUps = [
+      budget === null ? "Under $200" : `Keep under $${budget}`,
+      wantsStreaming ? "Add creator audio" : "Streaming-ready setup",
+      wantsGaming ? "Wireless only" : "Low-latency gaming setup",
+    ];
+
+    return {
+      role: "bot",
+      text: guidance,
+      picks,
+      followUps,
+    };
+  };
+
+  const sendChatPrompt = (prompt: string) => {
+    const normalized = prompt.trim();
+    if (!normalized) {
+      return;
+    }
+
+    setChatMessages((prev) => {
+      const nextId = prev.length + 1;
+      const reply = getAssistantReply(normalized);
+      return [
+        ...prev,
+        { id: nextId, role: "user", text: normalized },
+        { ...reply, id: nextId + 1 },
+      ];
+    });
+    setChatInput("");
+    setChatOpen(true);
+  };
+
+  const handleQuickPromptClick = (prompt: string) => {
+    sendChatPrompt(prompt);
+    setAvailableQuickPrompts((prev) => prev.filter((item) => item !== prompt));
+  };
+
+  const handleChatSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    sendChatPrompt(chatInput);
+  };
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
@@ -243,6 +308,25 @@ export default function Home() {
     });
     setCartCount(getCartCount());
     setLastAdded(name);
+  };
+
+  const handleAddBundle = (bundle: SetupBundle) => {
+    bundle.itemSlugs.forEach((slug) => {
+      const item = productBySlug.get(slug);
+      if (!item) {
+        return;
+      }
+
+      addCartItem({
+        id: item.slug,
+        name: item.name,
+        price: parsePrice(item.price),
+        quantity: 1,
+      });
+    });
+
+    setCartCount(getCartCount());
+    setLastAdded(`${bundle.title} bundle`);
   };
 
   const filteredProducts = useMemo(() => {
@@ -318,6 +402,8 @@ export default function Home() {
     const syncCartCount = () => {
       setCartCount(getCartCount());
     };
+
+    syncCartCount();
 
     window.addEventListener("glitched-cart-updated", syncCartCount);
 
@@ -455,10 +541,20 @@ export default function Home() {
               className={`product-card ${featuredProduct === index ? "is-featured" : ""}`}
               onMouseEnter={() => setFeaturedProduct(index)}
             >
-              <p className="tag">{item.tag}</p>
+              {item.image && (
+                <div className="product-thumb" aria-hidden="true">
+                  <Image src={item.image} alt="" width={520} height={320} className="thumb-primary" />
+                  <Image src={item.secondaryImage || item.image} alt="" width={520} height={320} className="thumb-secondary" />
+                </div>
+              )}
+              <div className="card-chip-row">
+                <p className="tag">{item.tag}</p>
+                <p className="proof-badge">{item.badge}</p>
+              </div>
               <h2>
-                <Link href={`/products/${toProductSlug(item.name)}`}>{item.name}</Link>
+                <Link href={`/products/${item.slug}`}>{item.name}</Link>
               </h2>
+              <p className="rating-row">★ {item.rating.toFixed(1)} · {item.reviews.toLocaleString()} reviews</p>
               <p>{item.description}</p>
               <div className="meter" aria-hidden="true">
                 <span style={{ width: item.meter }} />
@@ -474,59 +570,97 @@ export default function Home() {
         </section>
 
         <section id="catalog" className="catalog-section" aria-label="Tech accessory catalog">
+          <section className="bundle-strip" aria-label="Recommended bundles">
+            {setupBundles.map((bundle) => {
+              const bundleItems = bundle.itemSlugs
+                .map((slug) => productBySlug.get(slug))
+                .filter((item): item is Product => Boolean(item));
+              const bundleTotal = bundleItems.reduce((total, item) => total + parsePrice(item.price), 0) - bundle.savings;
+
+              return (
+                <article key={bundle.id} className="bundle-card">
+                  <p className="bundle-badge">{bundle.badge}</p>
+                  <h3>{bundle.title}</h3>
+                  <p>{bundle.description}</p>
+                  <ul>
+                    {bundleItems.map((item) => (
+                      <li key={item.slug}>{item.name}</li>
+                    ))}
+                  </ul>
+                  <div className="bundle-row">
+                    <strong>${bundleTotal}</strong>
+                    <span>SAVE ${bundle.savings}</span>
+                    <button type="button" onClick={() => handleAddBundle(bundle)}>
+                      Add Bundle
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </section>
+
           <header className="catalog-header">
             <h2>Browse By Gear Type</h2>
             <p>Click a category to view every matching item in the catalog.</p>
 
-            <div className="catalog-tools" aria-label="Catalog filters">
-              <label className="catalog-field">
-                <span>Search</span>
-                <input
-                  type="search"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by name, tag, or type"
-                />
-              </label>
+            <div className="catalog-sticky-bar">
+              <div className="catalog-tools" aria-label="Catalog filters">
+                <label className="catalog-field">
+                  <span>Search</span>
+                  <input
+                    type="search"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Search by name, tag, or type"
+                  />
+                </label>
 
-              <label className="catalog-field compact">
-                <span>Sort</span>
-                <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
-                  <option value="featured">Featured</option>
-                  <option value="price-low">Price: Low To High</option>
-                  <option value="price-high">Price: High To Low</option>
-                  <option value="name">Name: A-Z</option>
-                </select>
-              </label>
+                <label className="catalog-field compact">
+                  <span>Sort</span>
+                  <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                    <option value="featured">Featured</option>
+                    <option value="price-low">Price: Low To High</option>
+                    <option value="price-high">Price: High To Low</option>
+                    <option value="name">Name: A-Z</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="category-pills" role="tablist" aria-label="Shop categories">
+                {shopCategories.map((category) => (
+                  <button
+                    key={category}
+                    type="button"
+                    className={`category-pill ${selectedCategory === category ? "active" : ""}`}
+                    onClick={() => handleCategoryChange(category)}
+                  >
+                    {category}
+                  </button>
+                ))}
+              </div>
+
+              <p className="results-label">
+                Showing {sortedProducts.length} item{sortedProducts.length === 1 ? "" : "s"} in {selectedCategory}
+                {searchTerm ? ` matching "${searchTerm}"` : ""}
+              </p>
             </div>
           </header>
-
-          <div className="category-pills" role="tablist" aria-label="Shop categories">
-            {shopCategories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                className={`category-pill ${selectedCategory === category ? "active" : ""}`}
-                onClick={() => handleCategoryChange(category)}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-
-          <p className="results-label">
-            Showing {sortedProducts.length} item{sortedProducts.length === 1 ? "" : "s"} in {selectedCategory}
-            {searchTerm ? ` matching "${searchTerm}"` : ""}
-          </p>
 
           <div className="catalog-grid">
             {sortedProducts.map((item) => (
               <article key={item.name} className="catalog-card">
+                {item.image && (
+                  <div className="catalog-thumb" aria-hidden="true">
+                    <Image src={item.image} alt="" width={560} height={360} className="thumb-primary" />
+                    <Image src={item.secondaryImage || item.image} alt="" width={560} height={360} className="thumb-secondary" />
+                  </div>
+                )}
                 <p className="catalog-meta">
                   <span>{item.category}</span>
                   <span>{item.type}</span>
                 </p>
                 <h3>{item.name}</h3>
+                <p className="rating-row">★ {item.rating.toFixed(1)} · {item.reviews.toLocaleString()} reviews</p>
                 <p className="catalog-description">{item.description}</p>
                 <div className="catalog-row">
                   <strong>{item.price}</strong>
@@ -547,9 +681,88 @@ export default function Home() {
           Added {lastAdded || "item"} to cart
         </p>
 
-        <button type="button" className="chat-button" aria-label="Open chat">
-          1
-        </button>
+        <aside className={`setup-chat ${chatOpen ? "is-open" : ""}`} aria-label="Setup assistant">
+          {chatOpen && (
+            <section className="chat-panel" aria-live="polite">
+              <header className="chat-header">
+                <h3>Setup Assistant</h3>
+                <button type="button" onClick={() => setChatOpen(false)} aria-label="Close setup assistant">
+                  x
+                </button>
+              </header>
+
+              <div className="chat-messages">
+                {chatMessages.map((message) => (
+                  <article key={message.id} className={`chat-message ${message.role === "user" ? "is-user" : "is-bot"}`}>
+                    <p>{message.text}</p>
+                    {message.picks && (
+                      <ul className="chat-picks">
+                        {message.picks.map((item) => (
+                          <li key={`${message.id}-${item.name}`}>
+                            <div>
+                              <strong>
+                                <Link href={`/products/${toProductSlug(item.name)}`}>{item.name}</Link>
+                              </strong>
+                              <span>{item.price}</span>
+                            </div>
+                            <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
+                              Add
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.followUps && message.followUps.length > 0 && (
+                      <div className="chat-followups" aria-label="Chat follow-up suggestions">
+                        {message.followUps.map((followUp) => (
+                          <button key={`${message.id}-${followUp}`} type="button" onClick={() => sendChatPrompt(followUp)}>
+                            {followUp}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </article>
+                ))}
+              </div>
+
+              <div className="chat-quick-actions" aria-label="Suggested prompts">
+                {availableQuickPrompts.map((prompt) => (
+                  <button key={prompt} type="button" onClick={() => handleQuickPromptClick(prompt)}>
+                    {prompt}
+                  </button>
+                ))}
+                {availableQuickPrompts.length < assistantQuickPrompts.length && (
+                  <button type="button" onClick={() => setAvailableQuickPrompts(assistantQuickPrompts)}>
+                    Reset presets
+                  </button>
+                )}
+              </div>
+
+              <form className="chat-form" onSubmit={handleChatSubmit}>
+                <label htmlFor="setup-assistant-input" className="sr-only">
+                  Describe your setup needs
+                </label>
+                <input
+                  id="setup-assistant-input"
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  placeholder="Need a setup under $300 for streaming"
+                />
+                <button type="submit">Send</button>
+              </form>
+            </section>
+          )}
+
+          <button
+            type="button"
+            className="chat-button"
+            aria-label={chatOpen ? "Hide setup assistant" : "Open setup assistant"}
+            aria-pressed={chatOpen}
+            onClick={() => setChatOpen((prev) => !prev)}
+          >
+            1
+          </button>
+        </aside>
       </section>
     </main>
   );

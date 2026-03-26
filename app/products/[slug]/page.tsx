@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "../../lib/catalog";
 import ProductAddToCartButton from "../../components/product-add-to-cart-button";
@@ -23,6 +24,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
           <h1>{product.name}</h1>
           <p>{product.description}</p>
         </header>
+
+        {product.image && (
+          <div className="product-detail-image" aria-hidden="true">
+            <Image src={product.image} alt="" width={900} height={560} priority />
+          </div>
+        )}
 
         <section className="checkout-summary" aria-label="Product highlights">
           <h2>Specs</h2>
