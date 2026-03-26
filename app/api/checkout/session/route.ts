@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
+export const runtime = "nodejs";
+
 type CheckoutItem = {
   id: string;
   name: string;
@@ -63,15 +65,28 @@ export async function POST(request: Request) {
 
     const origin = request.headers.get("origin") ?? new URL(request.url).origin;
 
+    const orderRef = crypto.randomUUID();
+
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       line_items: lineItems,
       success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/checkout/cancel`,
       customer_email: body.customer.email,
+      client_reference_id: orderRef,
       billing_address_collection: "required",
+      shipping_address_collection: {
+        allowed_countries: ["US", "CA"],
+      },
+      phone_number_collection: {
+        enabled: true,
+      },
       metadata: {
+        orderRef,
+        itemIds: body.items.map((item) => item.id).join(","),
+        itemCount: String(body.items.length),
         fullName: body.customer.fullName,
+        email: body.customer.email,
         address: body.customer.address,
         city: body.customer.city,
       },
