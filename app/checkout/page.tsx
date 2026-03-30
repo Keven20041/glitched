@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { getCartItems, type CartItem } from "../lib/cart";
+import StoreTrustBar from "../components/store-trust-bar";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -111,6 +112,8 @@ export default function CheckoutPage() {
                 {isSubmitting ? "Redirecting..." : "Pay With Stripe"}
               </button>
             </section>
+
+            <StoreTrustBar compact />
           </form>
         )}
       </section>

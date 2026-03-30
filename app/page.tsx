@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { addCartItem, getCartCount } from "./lib/cart";
 import { catalogProducts } from "./lib/catalog";
+import RecentlyViewedRail from "./components/recently-viewed-rail";
+import { getNewsletterCtaDismissed, setNewsletterCtaDismissed } from "./lib/engagement";
 
 type Product = {
   slug: string;
@@ -37,6 +39,15 @@ type SetupBundle = {
   itemSlugs: string[];
   savings: number;
   badge: string;
+};
+
+type CreatorSetup = {
+  id: string;
+  creator: string;
+  title: string;
+  role: string;
+  quote: string;
+  itemSlugs: string[];
 };
 
 const navMenus = [
@@ -139,6 +150,33 @@ const setupBundles: SetupBundle[] = [
   },
 ];
 
+const creatorSetups: CreatorSetup[] = [
+  {
+    id: "creator-rush",
+    creator: "RUSHKITE",
+    title: "Aim-First Ranked Rig",
+    role: "Immortal FPS Player",
+    quote: "I tune for fast flicks and clean comms. Every ms matters.",
+    itemSlugs: ["logitech-g-pro-x-superlight-2", "wooting-60he", "hyperx-cloud-iii"],
+  },
+  {
+    id: "creator-nova",
+    creator: "NOVA FRAME",
+    title: "Compact Stream Desk",
+    role: "Twitch Creator",
+    quote: "Small desk, pro look. Lighting and audio are the unlock.",
+    itemSlugs: ["fifine-am8-dynamic-microphone", "logitech-c922-pro-stream-webcam", "elgato-key-light-air"],
+  },
+  {
+    id: "creator-byte",
+    creator: "BYTEFIELD",
+    title: "Portable Work/Gaming Kit",
+    role: "Remote Dev",
+    quote: "I move between studios, so my setup has to travel clean.",
+    itemSlugs: ["keychron-k2-pro", "anker-5-in-1-usb-c-hub", "baseus-blade-20000mah-65w-power-bank"],
+  },
+];
+
 const shopCategories = ["All", "Mice", "Keyboards", "Audio", "Power + Docks", "Mousepads", "Streaming"];
 const externalGuideLinks: Record<string, string> = {
   "How To Pick The Right Mouse": "https://www.logitech.com/en-us/discover/a/mouse-hand-size",
@@ -169,7 +207,6 @@ const assistantQuickPrompts = [
 ];
 
 const parsePrice = (price: string) => Number(price.replace("$", ""));
-const toProductSlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
 const byTopMeter = (items: Product[]) => {
   return [...items].sort((a, b) => Number.parseInt(b.meter, 10) - Number.parseInt(a.meter, 10));
@@ -188,6 +225,11 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [availableQuickPrompts, setAvailableQuickPrompts] = useState(assistantQuickPrompts);
+  const [compareSlugs, setCompareSlugs] = useState<string[]>([]);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [proofIndex, setProofIndex] = useState(0);
   const catalogSearchRef = useRef<HTMLInputElement>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
@@ -321,15 +363,29 @@ export default function Home() {
     setFeaturedProduct(0);
   };
 
-  const handleAddToCart = (name: string, price: string) => {
+  const handleAddToCart = (item: Product) => {
     addCartItem({
-      id: toProductSlug(name),
-      name,
-      price: parsePrice(price),
+      id: item.slug,
+      name: item.name,
+      price: parsePrice(item.price),
       quantity: 1,
     });
     setCartCount(getCartCount());
-    setLastAdded(name);
+    setLastAdded(item.name);
+  };
+
+  const toggleCompare = (slug: string) => {
+    setCompareSlugs((prev) => {
+      if (prev.includes(slug)) {
+        return prev.filter((item) => item !== slug);
+      }
+
+      if (prev.length >= 3) {
+        return [...prev.slice(1), slug];
+      }
+
+      return [...prev, slug];
+    });
   };
 
   const handleAddBundle = (bundle: SetupBundle) => {
@@ -441,6 +497,66 @@ export default function Home() {
       window.removeEventListener("glitched-cart-updated", syncCartCount);
     };
   }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProofIndex((prev) => (prev + 1) % products.length);
+    }, 2600);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (getNewsletterCtaDismissed()) {
+      return;
+    }
+
+    const onMouseLeave = (event: MouseEvent) => {
+      if (event.clientY > 0) {
+        return;
+      }
+
+      setShowLeadModal(true);
+      document.removeEventListener("mouseleave", onMouseLeave);
+    };
+
+    document.addEventListener("mouseleave", onMouseLeave);
+
+    return () => {
+      document.removeEventListener("mouseleave", onMouseLeave);
+    };
+  }, []);
+
+  const liveProofMessages = useMemo(() => {
+    return products.slice(0, 8).map((item, index) => {
+      const sold = 7 + ((index + item.name.length) % 19);
+      const carts = 2 + ((index * 3) % 9);
+      return `${item.name} | ${sold} bought today | ${carts} active carts`;
+    });
+  }, []);
+
+  const comparedProducts = useMemo(() => {
+    return compareSlugs
+      .map((slug) => productBySlug.get(slug))
+      .filter((item): item is Product => Boolean(item));
+  }, [compareSlugs, productBySlug]);
+
+  const highlightedProof = liveProofMessages[proofIndex % liveProofMessages.length];
+
+  const handleLeadSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!leadEmail.trim()) {
+      return;
+    }
+
+    setLeadSubmitted(true);
+    setNewsletterCtaDismissed();
+  };
+
+  const dismissLeadModal = () => {
+    setShowLeadModal(false);
+    setNewsletterCtaDismissed();
+  };
 
   const activeMenu = openMenuIndex !== null ? navMenus[openMenuIndex] : null;
 
@@ -583,7 +699,22 @@ export default function Home() {
             <li>240Hz Polling Profiles</li>
             <li>1,920 Setups Shared</li>
           </ul>
+          <p className="live-proof-chip" aria-live="polite">
+            {highlightedProof}
+          </p>
         </div>
+
+        <section className="social-proof-strip" aria-label="Live social proof">
+          <div className="social-proof-track">
+            {[0, 1].map((group) => (
+              <div key={`proof-${group}`} className="social-proof-group">
+                {liveProofMessages.map((message) => (
+                  <span key={`${group}-${message}`}>{message}</span>
+                ))}
+              </div>
+            ))}
+          </div>
+        </section>
 
         <section className="product-strip" aria-label="Featured products">
           {showcaseProducts.map((item, index) => (
@@ -612,7 +743,7 @@ export default function Home() {
               </div>
               <div className="product-row">
                 <strong>{item.price}</strong>
-                <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
+                <button type="button" onClick={() => handleAddToCart(item)}>
                   Add
                 </button>
               </div>
@@ -666,6 +797,36 @@ export default function Home() {
           </footer>
         </section>
 
+        <section className="creator-gallery" aria-label="Creator setup gallery">
+          <header className="creator-gallery-head">
+            <p>Community Setups</p>
+            <h2>Shop Real Creator Desks</h2>
+          </header>
+          <div className="creator-gallery-grid">
+            {creatorSetups.map((setup) => {
+              const setupItems = setup.itemSlugs
+                .map((slug) => productBySlug.get(slug))
+                .filter((item): item is Product => Boolean(item));
+
+              return (
+                <article key={setup.id} className="creator-card">
+                  <p className="creator-role">{setup.role}</p>
+                  <h3>{setup.creator}</h3>
+                  <p className="creator-title">{setup.title}</p>
+                  <blockquote>{setup.quote}</blockquote>
+                  <ul>
+                    {setupItems.map((item) => (
+                      <li key={`${setup.id}-${item.slug}`}>
+                        <Link href={`/products/${item.slug}`}>{item.name}</Link>
+                      </li>
+                    ))}
+                  </ul>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+
         <section id="catalog" className="catalog-section" aria-label="Tech accessory catalog">
           <section className="bundle-strip" aria-label="Recommended bundles">
             {setupBundles.map((bundle) => {
@@ -690,6 +851,10 @@ export default function Home() {
                     <button type="button" onClick={() => handleAddBundle(bundle)}>
                       Add Bundle
                     </button>
+                  </div>
+                  <p className="bundle-meter-label">Stack Completion: {Math.min(99, 72 + bundle.itemSlugs.length * 9)}%</p>
+                  <div className="bundle-meter" aria-hidden="true">
+                    <span style={{ width: `${Math.min(99, 72 + bundle.itemSlugs.length * 9)}%` }} />
                   </div>
                 </article>
               );
@@ -762,10 +927,17 @@ export default function Home() {
                 <p className="catalog-description">{item.description}</p>
                 <div className="catalog-row">
                   <strong>{item.price}</strong>
-                  <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
+                  <button type="button" onClick={() => handleAddToCart(item)}>
                     Add To Cart
                   </button>
                 </div>
+                <button
+                  type="button"
+                  className={`compare-toggle ${compareSlugs.includes(item.slug) ? "active" : ""}`}
+                  onClick={() => toggleCompare(item.slug)}
+                >
+                  {compareSlugs.includes(item.slug) ? "Remove Compare" : "Compare"}
+                </button>
               </article>
             ))}
 
@@ -774,6 +946,41 @@ export default function Home() {
             )}
           </div>
         </section>
+
+        <RecentlyViewedRail />
+
+        {comparedProducts.length > 0 && (
+          <aside className="compare-drawer" aria-label="Compare products">
+            <header>
+              <h2>Compare Gear</h2>
+              <button type="button" onClick={() => setCompareSlugs([])}>
+                Clear
+              </button>
+            </header>
+            <div className="compare-grid">
+              {comparedProducts.map((item) => (
+                <article key={`compare-${item.slug}`}>
+                  <h3>
+                    <Link href={`/products/${item.slug}`}>{item.name}</Link>
+                  </h3>
+                  <p>{item.category}</p>
+                  <div className="checkout-row">
+                    <span>Type</span>
+                    <strong>{item.type}</strong>
+                  </div>
+                  <div className="checkout-row">
+                    <span>Rating</span>
+                    <strong>{item.rating.toFixed(1)}</strong>
+                  </div>
+                  <div className="checkout-row">
+                    <span>Price</span>
+                    <strong>{item.price}</strong>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </aside>
+        )}
 
         <p className={`cart-toast ${lastAdded ? "is-visible" : ""}`} role="status" aria-live="polite">
           Added {lastAdded || "item"} to cart
@@ -799,11 +1006,11 @@ export default function Home() {
                           <li key={`${message.id}-${item.name}`}>
                             <div>
                               <strong>
-                                <Link href={`/products/${toProductSlug(item.name)}`}>{item.name}</Link>
+                                <Link href={`/products/${item.slug}`}>{item.name}</Link>
                               </strong>
                               <span>{item.price}</span>
                             </div>
-                            <button type="button" onClick={() => handleAddToCart(item.name, item.price)}>
+                            <button type="button" onClick={() => handleAddToCart(item)}>
                               Add
                             </button>
                           </li>
@@ -861,6 +1068,37 @@ export default function Home() {
             1
           </button>
         </aside>
+
+        {showLeadModal && (
+          <div className="lead-modal-backdrop" role="presentation" onClick={dismissLeadModal}>
+            <section className="lead-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="lead-close" onClick={dismissLeadModal} aria-label="Close offer">
+                x
+              </button>
+              <p>Before You Go</p>
+              <h2>Unlock 8% Off + Pro Setup Drop Alerts</h2>
+              {!leadSubmitted ? (
+                <form onSubmit={handleLeadSubmit} className="lead-form">
+                  <input
+                    type="email"
+                    value={leadEmail}
+                    onChange={(event) => setLeadEmail(event.target.value)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                  <button type="submit">Claim My Code</button>
+                </form>
+              ) : (
+                <div className="lead-success">
+                  <p>Your code is ready: GLITCH8</p>
+                  <button type="button" onClick={dismissLeadModal}>
+                    Keep Shopping
+                  </button>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
       </section>
     </main>
   );

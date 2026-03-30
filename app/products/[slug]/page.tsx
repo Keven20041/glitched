@@ -3,6 +3,8 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getProductBySlug } from "../../lib/catalog";
 import ProductAddToCartButton from "../../components/product-add-to-cart-button";
+import ProductEngagementPanel from "../../components/product-engagement-panel";
+import RecentlyViewedRail from "../../components/recently-viewed-rail";
 
 type ProductPageProps = {
   params: Promise<{ slug: string }>;
@@ -50,6 +52,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
             Back To Store
           </Link>
         </section>
+
+        <ProductEngagementPanel slug={product.slug} name={product.name} />
+        <RecentlyViewedRail title="You May Also Like" hideSlug={product.slug} />
       </section>
     </main>
   );

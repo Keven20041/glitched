@@ -8,6 +8,8 @@ import {
   updateCartItemQuantity,
   type CartItem,
 } from "../lib/cart";
+import StoreTrustBar from "../components/store-trust-bar";
+import RecentlyViewedRail from "../components/recently-viewed-rail";
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -88,6 +90,9 @@ export default function CartPage() {
                 Proceed To Checkout
               </Link>
             </section>
+
+            <StoreTrustBar compact />
+            <RecentlyViewedRail title="Keep Building Your Setup" />
           </>
         )}
       </section>

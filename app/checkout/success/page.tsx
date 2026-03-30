@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { clearCart } from "../../lib/cart";
+import { addCartItem, clearCart } from "../../lib/cart";
+import { catalogProducts } from "../../lib/catalog";
+import StoreTrustBar from "../../components/store-trust-bar";
 
 type TrackedOrder = {
   purchaseId: string;
@@ -22,6 +24,10 @@ export default function CheckoutSuccessPage() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
+  const [copied, setCopied] = useState(false);
+  const referralCode = "SQUAD10";
+
+  const upsellItems = catalogProducts.slice(0, 3);
 
   useEffect(() => {
     clearCart();
@@ -86,6 +92,54 @@ export default function CheckoutSuccessPage() {
             Return To Store
           </Link>
         </section>
+
+        <section className="checkout-summary" aria-label="Recommended add-ons">
+          <h2>Finish Your Setup</h2>
+          <p>Add one of these while your first order is processing.</p>
+          <div className="upsell-grid">
+            {upsellItems.map((item) => (
+              <article key={item.slug} className="upsell-card">
+                <h3>{item.name}</h3>
+                <p>{item.price}</p>
+                <button
+                  type="button"
+                  className="checkout-link"
+                  onClick={() => {
+                    addCartItem({
+                      id: item.slug,
+                      name: item.name,
+                      price: Number(item.price.replace("$", "")),
+                      quantity: 1,
+                    });
+                  }}
+                >
+                  Add To Cart
+                </button>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="checkout-summary" aria-label="Referral rewards">
+          <h2>Invite Your Squad</h2>
+          <p>Share your referral code and your friends get 10% off their first order.</p>
+          <div className="checkout-row">
+            <span>Referral Code</span>
+            <strong>{referralCode}</strong>
+          </div>
+          <button
+            type="button"
+            className="checkout-link"
+            onClick={async () => {
+              await navigator.clipboard.writeText(referralCode);
+              setCopied(true);
+            }}
+          >
+            {copied ? "Copied" : "Copy Code"}
+          </button>
+        </section>
+
+        <StoreTrustBar compact />
       </section>
     </main>
   );
