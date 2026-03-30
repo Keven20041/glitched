@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import { catalogProducts } from "../lib/catalog";
-import { getRecentlyViewedProducts } from "../lib/engagement";
+
+const VIEWED_PRODUCTS_KEY = "glitched-viewed-products";
 
 type RecentlyViewedRailProps = {
   title?: string;
@@ -11,7 +12,34 @@ type RecentlyViewedRailProps = {
 };
 
 export default function RecentlyViewedRail({ title = "Continue Your Setup", hideSlug }: RecentlyViewedRailProps) {
-  const [slugs] = useState<string[]>(() => getRecentlyViewedProducts());
+  const viewedRaw = useSyncExternalStore(
+    (onStoreChange) => {
+      if (typeof window === "undefined") {
+        return () => {
+          return;
+        };
+      }
+
+      window.addEventListener("storage", onStoreChange);
+
+      return () => {
+        window.removeEventListener("storage", onStoreChange);
+      };
+    },
+    () => {
+      return window.localStorage.getItem(VIEWED_PRODUCTS_KEY) ?? "[]";
+    },
+    () => "[]",
+  );
+
+  const slugs = useMemo(() => {
+    try {
+      const parsed = JSON.parse(viewedRaw) as unknown;
+      return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+    } catch {
+      return [];
+    }
+  }, [viewedRaw]);
 
   const items = useMemo(() => {
     const filtered = slugs.filter((slug) => slug !== hideSlug);

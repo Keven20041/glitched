@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { addCartItem, clearCart } from "../../lib/cart";
 import { catalogProducts } from "../../lib/catalog";
@@ -20,7 +20,7 @@ type TrackedOrder = {
   };
 };
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessContent() {
   const params = useSearchParams();
   const sessionId = params.get("session_id");
   const [order, setOrder] = useState<TrackedOrder | null>(null);
@@ -142,5 +142,25 @@ export default function CheckoutSuccessPage() {
         <StoreTrustBar compact />
       </section>
     </main>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="checkout-page">
+          <section className="checkout-shell" aria-label="Payment success loading state">
+            <header className="checkout-header">
+              <p>PAYMENT SUCCESS</p>
+              <h1>Order confirmed</h1>
+              <p>Loading your order details...</p>
+            </header>
+          </section>
+        </main>
+      }
+    >
+      <CheckoutSuccessContent />
+    </Suspense>
   );
 }
