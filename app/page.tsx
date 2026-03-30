@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { addCartItem, getCartCount } from "./lib/cart";
@@ -71,7 +71,7 @@ const navMenus = [
     columns: [
       {
         heading: "How-To",
-        links: ["Pick The Right Mouse", "Keyboard Switch Guide", "Audio EQ Starter", "Cable Management"],
+        links: ["How To Pick The Right Mouse", "Keyboard Switch Guide", "Audio EQ Starter", "Cable Management"],
       },
       {
         heading: "Support",
@@ -140,6 +140,27 @@ const setupBundles: SetupBundle[] = [
 ];
 
 const shopCategories = ["All", "Mice", "Keyboards", "Audio", "Power + Docks", "Mousepads", "Streaming"];
+const externalGuideLinks: Record<string, string> = {
+  "How To Pick The Right Mouse": "https://www.logitech.com/en-us/discover/a/mouse-hand-size",
+  "Keyboard Switch Guide": "https://kineticlabs.com/guides/keyboard-switches",
+  "Audio EQ Starter": "https://audient.com/tutorial/the-beginners-guide-to-eq/",
+  "Cable Management": "https://www.bradyid.com/resources/network-cable-management-guide",
+  
+};
+
+const mouseGuideFitBands = [
+  "Small hands: try shorter, narrower mice for easier fingertip control.",
+  "Medium hands: balanced shell sizes work with most grip styles.",
+  "Large hands: prioritize longer bodies and wider rear support.",
+];
+
+const mouseGuideChecklist = [
+  "Measure hand length and width first, then compare to mouse dimensions.",
+  "Choose your grip style: palm for comfort, claw for agility, fingertip for micro-adjustments.",
+  "Pick a weight class for your use: lighter for fast aim, heavier for steadier office control.",
+  "Confirm button layout and side-shape support before checkout.",
+];
+
 const assistantQuickPrompts = [
   "Gaming setup under $250",
   "Compact desk setup for work",
@@ -167,6 +188,7 @@ export default function Home() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [availableQuickPrompts, setAvailableQuickPrompts] = useState(assistantQuickPrompts);
+  const catalogSearchRef = useRef<HTMLInputElement>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
       id: 1,
@@ -329,6 +351,14 @@ export default function Home() {
     setLastAdded(`${bundle.title} bundle`);
   };
 
+  const openLiveFilter = () => {
+    document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setTimeout(() => {
+      catalogSearchRef.current?.focus();
+      catalogSearchRef.current?.select();
+    }, 220);
+  };
+
   const filteredProducts = useMemo(() => {
     const byCategory =
       selectedCategory === "All" ? products : products.filter((item) => item.category === selectedCategory);
@@ -452,9 +482,9 @@ export default function Home() {
                 {menu.title}
               </button>
             ))}
-            <a href="#catalog" className="utility-link" aria-label="Jump to catalog">
+            <button type="button" className="utility-link" aria-label="Open live catalog filter" onClick={openLiveFilter}>
               Search
-            </a>
+            </button>
             <Link href="/cart" className="utility-link" aria-label="Open cart">
               Cart <span className="cart-count">{cartCount}</span>
             </Link>
@@ -467,9 +497,30 @@ export default function Home() {
                     <ul>
                       {column.links.map((link) => (
                         <li key={link}>
-                          <button type="button" className="mega-link">
-                            {link}
-                          </button>
+                          {externalGuideLinks[link] ? (
+                            <a
+                              href={externalGuideLinks[link]}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="mega-link"
+                            >
+                              {link}
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              className="mega-link"
+                              onClick={() => {
+                                if (shopCategories.includes(link)) {
+                                  handleCategoryChange(link);
+                                  document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                                }
+                                setOpenMenuIndex(null);
+                              }}
+                            >
+                              {link}
+                            </button>
+                          )}
                         </li>
                       ))}
                     </ul>
@@ -569,6 +620,52 @@ export default function Home() {
           ))}
         </section>
 
+        <section className="mouse-guide-panel" aria-label="How to pick the right mouse">
+          <header className="mouse-guide-head">
+            <p>Guide</p>
+            <h2>How To Pick The Right Mouse</h2>
+          </header>
+          <p>
+            Start with hand size, then match shape and grip style to your use case. This quick-fit guide summarizes key
+            buying checks so your mouse feels natural in long sessions.
+          </p>
+
+          <div className="mouse-guide-grid">
+            <article>
+              <h3>Fit By Hand Size</h3>
+              <ul>
+                {mouseGuideFitBands.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+
+            <article>
+              <h3>Quick Decision Flow</h3>
+              <ul>
+                {mouseGuideChecklist.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </article>
+          </div>
+
+          <footer className="mouse-guide-footer">
+            <a href={externalGuideLinks["How To Pick The Right Mouse"]} target="_blank" rel="noopener noreferrer">
+              Read Source Article (Logitech)
+            </a>
+            <button
+              type="button"
+              onClick={() => {
+                handleCategoryChange("Mice");
+                document.getElementById("catalog")?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              Shop Mice
+            </button>
+          </footer>
+        </section>
+
         <section id="catalog" className="catalog-section" aria-label="Tech accessory catalog">
           <section className="bundle-strip" aria-label="Recommended bundles">
             {setupBundles.map((bundle) => {
@@ -608,6 +705,7 @@ export default function Home() {
                 <label className="catalog-field">
                   <span>Search</span>
                   <input
+                    ref={catalogSearchRef}
                     type="search"
                     value={searchTerm}
                     onChange={(event) => setSearchTerm(event.target.value)}

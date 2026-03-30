@@ -622,6 +622,110 @@ body {
   padding: 0.9rem;
 }
 
+.mouse-guide-panel {
+  grid-column: 2;
+  position: relative;
+  z-index: 2;
+  margin: 0 1.05rem 0.8rem 0;
+  border: 1px solid rgba(34, 231, 255, 0.3);
+  background:
+    linear-gradient(160deg, rgba(5, 12, 30, 0.9), rgba(8, 16, 40, 0.78)),
+    radial-gradient(circle at 12% 8%, rgba(34, 231, 255, 0.14), transparent 44%);
+  padding: 0.95rem;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.26);
+}
+
+.mouse-guide-head p,
+.mouse-guide-head h2,
+.mouse-guide-panel p {
+  margin: 0;
+}
+
+.mouse-guide-head p {
+  font-family: var(--font-orbitron), "Segoe UI", sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8fd8ff;
+}
+
+.mouse-guide-head h2 {
+  margin-top: 0.3rem;
+  font-family: var(--font-orbitron), "Segoe UI", sans-serif;
+  font-size: 0.96rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f2f8ff;
+}
+
+.mouse-guide-panel > p {
+  margin-top: 0.45rem;
+  max-width: 75ch;
+  color: #acc7ea;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.mouse-guide-grid {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.mouse-guide-grid article {
+  border: 1px solid rgba(87, 136, 255, 0.34);
+  background: rgba(4, 10, 28, 0.66);
+  padding: 0.72rem;
+}
+
+.mouse-guide-grid h3 {
+  margin: 0;
+  font-family: var(--font-orbitron), "Segoe UI", sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e5f6ff;
+}
+
+.mouse-guide-grid ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+  color: #b8d1ef;
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.mouse-guide-footer {
+  margin-top: 0.7rem;
+  border-top: 1px solid rgba(87, 136, 255, 0.28);
+  padding-top: 0.6rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.mouse-guide-footer a,
+.mouse-guide-footer button {
+  border: 1px solid rgba(34, 231, 255, 0.45);
+  background: rgba(34, 231, 255, 0.12);
+  color: #d9f7ff;
+  font-family: var(--font-orbitron), "Segoe UI", sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.38rem 0.55rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mouse-guide-footer button {
+  margin-left: auto;
+}
+
 .bundle-strip {
   margin: 0 0 1rem;
   display: grid;
@@ -1253,6 +1357,7 @@ body {
 
   .hero-copy,
   .product-strip,
+  .mouse-guide-panel,
   .catalog-section {
     grid-column: 1;
   }
@@ -1276,6 +1381,10 @@ body {
   }
 
   .catalog-section {
+    margin-left: 0;
+  }
+
+  .mouse-guide-panel {
     margin-left: 0;
   }
 
@@ -1347,6 +1456,14 @@ body {
 
   .catalog-section {
     margin: 0 0.75rem 0.85rem;
+  }
+
+  .mouse-guide-panel {
+    margin: 0 0.75rem 0.7rem;
+  }
+
+  .mouse-guide-grid {
+    grid-template-columns: 1fr;
   }
 
   .catalog-tools {
