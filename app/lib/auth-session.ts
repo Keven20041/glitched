@@ -42,12 +42,12 @@ const normalizeSession = (value: unknown): AppAuthSession | null => {
 
 export const getServerAuthSession = async (): Promise<AppAuthSession | null> => {
   const incomingHeaders = await headers();
-  const session = await auth.api.getSession({ headers: incomingHeaders });
+  const session = await auth().api.getSession({ headers: incomingHeaders });
   return normalizeSession(session);
 };
 
 export const getRequestAuthSession = async (request: Request): Promise<AppAuthSession | null> => {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await auth().api.getSession({ headers: request.headers });
   return normalizeSession(session);
 };
 
