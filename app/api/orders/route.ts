@@ -3,10 +3,16 @@ import {
   getPurchasedOrderByPurchaseId,
   getPurchasedOrderBySessionId,
 } from "../../lib/orders";
+import { getRequestAuthSession } from "../../lib/auth-session";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
+  const authSession = await getRequestAuthSession(request);
+  if (!authSession) {
+    return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
+  }
+
   const url = new URL(request.url);
   const purchaseId = url.searchParams.get("purchase_id");
   const sessionId = url.searchParams.get("session_id");
@@ -23,6 +29,10 @@ export async function GET(request: Request) {
     : getPurchasedOrderBySessionId(sessionId ?? "");
 
   if (!order) {
+    return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  }
+
+  if (order.userId !== authSession.user.id) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 

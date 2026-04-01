@@ -22,7 +22,7 @@ export const catalogProducts: CatalogProduct[] = [
     description: "Tournament-favorite ultra-light wireless mouse with Hero 2 sensor and long battery life.",
     meter: "95%",
     specs: ["60g ultra-light", "Hero 2 sensor", "LIGHTSPEED wireless", "USB-C charging"],
-    image: "/Mouse/Logitech G Pro X Superlight 2.webp",
+    image: "/mouse/Logitech G Pro X Superlight 2.webp",
   },
   {
     slug: "razer-viper-v3-pro",
@@ -34,7 +34,7 @@ export const catalogProducts: CatalogProduct[] = [
     description: "Pro-grade symmetrical mouse with Focus Pro sensor and ultra-low click latency.",
     meter: "92%",
     specs: ["54g lightweight", "Focus Pro 35K sensor", "Gen-3 optical switches", "Up to 95h battery"],
-    image: "/Mouse/Razer Viper V3 Pro.webp",
+    image: "/mouse/Razer Viper V3 Pro.webp",
   },
   {
     slug: "logitech-g305-lightspeed",
@@ -46,7 +46,7 @@ export const catalogProducts: CatalogProduct[] = [
     description: "Reliable low-latency wireless mouse that remains one of the most popular budget picks.",
     meter: "88%",
     specs: ["Hero sensor", "LIGHTSPEED wireless", "250h battery life", "Lightweight shell"],
-    image: "/Mouse/Logitech G305 LIGHTSPEED.webp",
+    image: "/mouse/Logitech G305 LIGHTSPEED.webp",
   },
   {
     slug: "wooting-60he",

@@ -13,6 +13,7 @@ export type PurchasedCustomer = {
 
 export type PurchasedOrder = {
   purchaseId: string;
+  userId?: string;
   orderRef: string;
   stripeSessionId: string;
   paymentIntentId?: string;
@@ -24,6 +25,7 @@ export type PurchasedOrder = {
 };
 
 type SavePurchasedOrderInput = {
+  userId?: string;
   orderRef: string;
   stripeSessionId: string;
   paymentIntentId?: string;
@@ -34,6 +36,7 @@ type SavePurchasedOrderInput = {
 
 const ordersByPurchaseId = new Map<string, PurchasedOrder>();
 const purchaseIdBySessionId = new Map<string, string>();
+const purchaseIdsByUserId = new Map<string, Set<string>>();
 
 const buildPurchaseId = () => {
   return `ord_${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
@@ -51,6 +54,7 @@ export const savePurchasedOrder = (input: SavePurchasedOrderInput): PurchasedOrd
   const purchaseId = buildPurchaseId();
   const created: PurchasedOrder = {
     purchaseId,
+    userId: input.userId,
     orderRef: input.orderRef,
     stripeSessionId: input.stripeSessionId,
     paymentIntentId: input.paymentIntentId,
@@ -63,6 +67,12 @@ export const savePurchasedOrder = (input: SavePurchasedOrderInput): PurchasedOrd
 
   ordersByPurchaseId.set(purchaseId, created);
   purchaseIdBySessionId.set(input.stripeSessionId, purchaseId);
+
+  if (input.userId) {
+    const userOrders = purchaseIdsByUserId.get(input.userId) ?? new Set<string>();
+    userOrders.add(purchaseId);
+    purchaseIdsByUserId.set(input.userId, userOrders);
+  }
 
   return created;
 };
@@ -78,4 +88,16 @@ export const getPurchasedOrderBySessionId = (sessionId: string) => {
   }
 
   return getPurchasedOrderByPurchaseId(purchaseId);
+};
+
+export const getPurchasedOrdersByUserId = (userId: string) => {
+  const purchaseIds = purchaseIdsByUserId.get(userId);
+  if (!purchaseIds || purchaseIds.size === 0) {
+    return [];
+  }
+
+  return [...purchaseIds]
+    .map((purchaseId) => ordersByPurchaseId.get(purchaseId))
+    .filter((order): order is PurchasedOrder => Boolean(order))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 };

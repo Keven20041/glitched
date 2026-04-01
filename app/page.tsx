@@ -221,7 +221,6 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("featured");
   const [cartCount, setCartCount] = useState(0);
-  const [lastAdded, setLastAdded] = useState("");
   const [chatOpen, setChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState("");
   const [availableQuickPrompts, setAvailableQuickPrompts] = useState(assistantQuickPrompts);
@@ -371,7 +370,6 @@ export default function Home() {
       quantity: 1,
     });
     setCartCount(getCartCount());
-    setLastAdded(item.name);
   };
 
   const toggleCompare = (slug: string) => {
@@ -404,7 +402,6 @@ export default function Home() {
     });
 
     setCartCount(getCartCount());
-    setLastAdded(`${bundle.title} bundle`);
   };
 
   const openLiveFilter = () => {
@@ -471,18 +468,6 @@ export default function Home() {
 
     return () => clearInterval(interval);
   }, [showcaseProducts.length]);
-
-  useEffect(() => {
-    if (!lastAdded) {
-      return;
-    }
-
-    const timeout = setTimeout(() => {
-      setLastAdded("");
-    }, 1700);
-
-    return () => clearTimeout(timeout);
-  }, [lastAdded]);
 
   useEffect(() => {
     const syncCartCount = () => {
@@ -584,6 +569,7 @@ export default function Home() {
           className="brand-logo"
         />
         <nav className="main-nav" aria-label="Main navigation" onMouseLeave={() => setOpenMenuIndex(null)}>
+          <div className="main-nav-primary">
             {navMenus.map((menu, index) => (
               <button
                 key={menu.title}
@@ -598,12 +584,23 @@ export default function Home() {
                 {menu.title}
               </button>
             ))}
-            <button type="button" className="utility-link" aria-label="Open live catalog filter" onClick={openLiveFilter}>
+          </div>
+          <div className="main-nav-utility">
+            <button
+              type="button"
+              className="utility-link utility-search"
+              aria-label="Open live catalog filter"
+              onClick={openLiveFilter}
+            >
               Search
             </button>
+            <Link href="/account/profile" className="utility-link" aria-label="Open account">
+              Account
+            </Link>
             <Link href="/cart" className="utility-link" aria-label="Open cart">
               Cart <span className="cart-count">{cartCount}</span>
             </Link>
+          </div>
 
             {activeMenu && (
               <div className="mega-menu" role="menu" aria-label={`${activeMenu.title} submenu`}>
@@ -981,10 +978,6 @@ export default function Home() {
             </div>
           </aside>
         )}
-
-        <p className={`cart-toast ${lastAdded ? "is-visible" : ""}`} role="status" aria-live="polite">
-          Added {lastAdded || "item"} to cart
-        </p>
 
         <aside className={`setup-chat ${chatOpen ? "is-open" : ""}`} aria-label="Setup assistant">
           {chatOpen && (

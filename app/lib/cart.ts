@@ -7,6 +7,12 @@ export type CartItem = {
 
 const CART_STORAGE_KEY = "glitched-cart";
 const CART_UPDATED_EVENT = "glitched-cart-updated";
+const CART_ITEM_ADDED_EVENT = "glitched-cart-item-added";
+
+export type CartItemAddedEventDetail = {
+  name: string;
+  quantity: number;
+};
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -30,6 +36,21 @@ const writeCart = (items: CartItem[]) => {
 
   window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event(CART_UPDATED_EVENT));
+};
+
+const notifyCartItemAdded = (item: CartItem) => {
+  if (!isBrowser()) {
+    return;
+  }
+
+  window.dispatchEvent(
+    new CustomEvent<CartItemAddedEventDetail>(CART_ITEM_ADDED_EVENT, {
+      detail: {
+        name: item.name,
+        quantity: item.quantity,
+      },
+    }),
+  );
 };
 
 export const getCartItems = (): CartItem[] => {
@@ -57,10 +78,12 @@ export const addCartItem = (incoming: CartItem) => {
       item.id === incoming.id ? { ...item, quantity: item.quantity + incoming.quantity } : item,
     );
     writeCart(updated);
+    notifyCartItemAdded(incoming);
     return;
   }
 
   writeCart([...existing, incoming]);
+  notifyCartItemAdded(incoming);
 };
 
 export const updateCartItemQuantity = (id: string, quantity: number) => {
@@ -81,3 +104,4 @@ export const clearCart = () => {
 };
 
 export const cartUpdatedEventName = CART_UPDATED_EVENT;
+export const cartItemAddedEventName = CART_ITEM_ADDED_EVENT;

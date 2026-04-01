@@ -134,6 +134,7 @@ export async function POST(request: Request) {
   });
 
   const purchasedOrder = savePurchasedOrder({
+    userId: session.metadata?.userId,
     orderRef,
     stripeSessionId: session.id,
     paymentIntentId:

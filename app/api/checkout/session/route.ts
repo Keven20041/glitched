@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { getRequestAuthSession } from "../../../lib/auth-session";
 
 export const runtime = "nodejs";
 
@@ -31,6 +32,11 @@ const getStripe = () => {
 
 export async function POST(request: Request) {
   const stripe = getStripe();
+  const authSession = await getRequestAuthSession(request);
+
+  if (!authSession) {
+    return NextResponse.json({ error: "You must be signed in to checkout." }, { status: 401 });
+  }
 
   if (!stripe) {
     return NextResponse.json({ error: "Stripe is not configured." }, { status: 500 });
@@ -83,6 +89,7 @@ export async function POST(request: Request) {
       },
       metadata: {
         orderRef,
+        userId: authSession.user.id,
         itemIds: body.items.map((item) => item.id).join(","),
         itemCount: String(body.items.length),
         fullName: body.customer.fullName,
