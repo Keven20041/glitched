@@ -21,6 +21,19 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unable to load profile preferences." }, { status: 500 });
   }
 
+  const { data: latestPurchase } = await supabase
+    .from("profile_purchases")
+    .select("created_at")
+    .eq("user_id", authSession.user.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { count: purchaseCount } = await supabase
+    .from("profile_purchases")
+    .select("purchase_id", { count: "exact", head: true })
+    .eq("user_id", authSession.user.id);
+
   return NextResponse.json({
     user: {
       id: authSession.user.id,
@@ -30,6 +43,10 @@ export async function GET(request: Request) {
     preferences: {
       address: data?.address ?? "",
       city: data?.city ?? "",
+    },
+    purchases: {
+      count: purchaseCount ?? 0,
+      latestPurchaseAt: latestPurchase?.created_at ?? null,
     },
   });
 }

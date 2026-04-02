@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getRequestAuthSession } from "../../../lib/auth-session";
-import { getPurchasedOrdersByUserId } from "../../../lib/orders";
+import { getPurchasedOrdersForUser } from "../../../lib/orders";
 
 export const runtime = "nodejs";
 
@@ -10,6 +10,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
   }
 
-  const orders = getPurchasedOrdersByUserId(authSession.user.id);
+  const orders = await getPurchasedOrdersForUser(authSession.user.id);
   return NextResponse.json({ orders });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createFulfillmentOrder } from "../../../lib/fulfillment";
+import { createFulfillmentOrder, persistFulfillmentToDatabase } from "../../../lib/fulfillment";
 import { savePurchasedOrder } from "../../../lib/orders";
 
 export const runtime = "nodejs";
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
     items,
   });
 
-  const purchasedOrder = savePurchasedOrder({
+  const purchasedOrder = await savePurchasedOrder({
     userId: session.metadata?.userId,
     orderRef,
     stripeSessionId: session.id,
@@ -157,6 +157,8 @@ export async function POST(request: Request) {
     items,
     fulfillment,
   });
+
+  await persistFulfillmentToDatabase(purchasedOrder.purchaseId, fulfillment);
 
   processedSessionIds.add(session.id);
 

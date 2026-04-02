@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import {
-  getPurchasedOrderByPurchaseId,
-  getPurchasedOrderBySessionId,
+  getPurchasedOrderForUserByPurchaseId,
+  getPurchasedOrderForUserBySessionId,
 } from "../../lib/orders";
 import { getRequestAuthSession } from "../../lib/auth-session";
 
@@ -25,14 +25,10 @@ export async function GET(request: Request) {
   }
 
   const order = purchaseId
-    ? getPurchasedOrderByPurchaseId(purchaseId)
-    : getPurchasedOrderBySessionId(sessionId ?? "");
+    ? await getPurchasedOrderForUserByPurchaseId(purchaseId, authSession.user.id)
+    : await getPurchasedOrderForUserBySessionId(sessionId ?? "", authSession.user.id);
 
   if (!order) {
-    return NextResponse.json({ error: "Order not found." }, { status: 404 });
-  }
-
-  if (order.userId !== authSession.user.id) {
     return NextResponse.json({ error: "Order not found." }, { status: 404 });
   }
 

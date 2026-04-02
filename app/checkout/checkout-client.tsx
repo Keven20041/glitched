@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
-import { cartUpdatedEventName, getCartItems, type CartItem } from "../lib/cart";
+import { FormEvent, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { getCartSnapshotRaw, parseCartSnapshot, subscribeToCartStore } from "../lib/cart";
 import StoreTrustBar from "../components/store-trust-bar";
 
 type CheckoutClientProps = {
@@ -16,24 +16,15 @@ const currency = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+const EMPTY_CART_RAW = "[]";
+
 export default function CheckoutClient({ initialFullName = "", initialEmail = "" }: CheckoutClientProps) {
-  const items = useSyncExternalStore<CartItem[]>(
-    (onStoreChange) => {
-      if (typeof window === "undefined") {
-        return () => {};
-      }
-
-      window.addEventListener(cartUpdatedEventName, onStoreChange);
-      window.addEventListener("storage", onStoreChange);
-
-      return () => {
-        window.removeEventListener(cartUpdatedEventName, onStoreChange);
-        window.removeEventListener("storage", onStoreChange);
-      };
-    },
-    getCartItems,
-    () => [],
+  const cartSnapshot = useSyncExternalStore<string>(
+    subscribeToCartStore,
+    getCartSnapshotRaw,
+    () => EMPTY_CART_RAW,
   );
+  const items = useMemo(() => parseCartSnapshot(cartSnapshot), [cartSnapshot]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
   const [fullName, setFullName] = useState(initialFullName);

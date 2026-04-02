@@ -8,25 +8,62 @@ export type CartItem = {
 const CART_STORAGE_KEY = "glitched-cart";
 const CART_UPDATED_EVENT = "glitched-cart-updated";
 const CART_ITEM_ADDED_EVENT = "glitched-cart-item-added";
+const EMPTY_CART_RAW = "[]";
 
 export type CartItemAddedEventDetail = {
   name: string;
   quantity: number;
 };
 
+const EMPTY_CART: CartItem[] = [];
+let lastCartRaw: string | null = null;
+let lastCartSnapshot: CartItem[] = EMPTY_CART;
+
 const isBrowser = () => typeof window !== "undefined";
 
 const safeParseCart = (raw: string | null): CartItem[] => {
   if (!raw) {
-    return [];
+    return EMPTY_CART;
   }
 
   try {
     const parsed = JSON.parse(raw) as CartItem[];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed : EMPTY_CART;
   } catch {
-    return [];
+    return EMPTY_CART;
   }
+};
+
+export const subscribeToCartStore = (onStoreChange: () => void) => {
+  if (!isBrowser()) {
+    return () => {};
+  }
+
+  window.addEventListener(CART_UPDATED_EVENT, onStoreChange);
+  window.addEventListener("storage", onStoreChange);
+
+  return () => {
+    window.removeEventListener(CART_UPDATED_EVENT, onStoreChange);
+    window.removeEventListener("storage", onStoreChange);
+  };
+};
+
+export const getCartSnapshotRaw = (): string => {
+  if (!isBrowser()) {
+    return EMPTY_CART_RAW;
+  }
+
+  return window.localStorage.getItem(CART_STORAGE_KEY) ?? EMPTY_CART_RAW;
+};
+
+export const parseCartSnapshot = (rawSnapshot: string): CartItem[] => {
+  if (rawSnapshot === lastCartRaw) {
+    return lastCartSnapshot;
+  }
+
+  lastCartRaw = rawSnapshot;
+  lastCartSnapshot = safeParseCart(rawSnapshot);
+  return lastCartSnapshot;
 };
 
 const writeCart = (items: CartItem[]) => {
@@ -54,11 +91,7 @@ const notifyCartItemAdded = (item: CartItem) => {
 };
 
 export const getCartItems = (): CartItem[] => {
-  if (!isBrowser()) {
-    return [];
-  }
-
-  return safeParseCart(window.localStorage.getItem(CART_STORAGE_KEY));
+  return parseCartSnapshot(getCartSnapshotRaw());
 };
 
 export const getCartCount = (): number => {
