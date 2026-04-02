@@ -17,27 +17,62 @@ type ProfileResponse = {
   error?: string;
 };
 
+type NewsletterResponse = {
+  subscription?: {
+    email?: string;
+    status?: string;
+    subscribedAt?: string;
+  } | null;
+  message?: string;
+  error?: string;
+};
+
+const newsletterButtonLabel = (status: string | null) => {
+  if (status === "active") {
+    return "Leave Drop List";
+  }
+
+  return "Join Drop List";
+};
+
 export default function ProfileClient({ initialName, initialEmail }: ProfileClientProps) {
   const [name, setName] = useState(initialName);
   const [email] = useState(initialEmail);
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
+  const [dropListStatus, setDropListStatus] = useState<string | null>(null);
+  const [dropListMessage, setDropListMessage] = useState("");
+  const [dropListLoading, setDropListLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const dropListLabel =
+    dropListStatus === "active" ? "Subscribed to Newsletter" : dropListStatus ? "Not Subscribed" : "Newsletter Status";
 
   useEffect(() => {
     let isMounted = true;
 
     const loadPreferences = async () => {
-      const response = await fetch("/api/account/profile", { cache: "no-store" });
-      if (!response.ok || !isMounted) {
+      const [profileResponse, newsletterResponse] = await Promise.all([
+        fetch("/api/account/profile", { cache: "no-store" }),
+        fetch("/api/newsletter", { cache: "no-store" }),
+      ]);
+
+      if (!isMounted) {
         return;
       }
 
-      const data = (await response.json()) as ProfileResponse;
-      setAddress(data.preferences?.address ?? "");
-      setCity(data.preferences?.city ?? "");
+      if (profileResponse.ok) {
+        const data = (await profileResponse.json()) as ProfileResponse;
+        setAddress(data.preferences?.address ?? "");
+        setCity(data.preferences?.city ?? "");
+      }
+
+      if (newsletterResponse.ok) {
+        const data = (await newsletterResponse.json()) as NewsletterResponse;
+        setDropListStatus(data.subscription?.status ?? null);
+      }
     };
 
     loadPreferences().catch(() => {
@@ -95,11 +130,51 @@ export default function ProfileClient({ initialName, initialEmail }: ProfileClie
     }
   };
 
+  const handleDropListToggle = async () => {
+    setDropListLoading(true);
+    setDropListMessage("");
+
+    try {
+      const response = await fetch("/api/newsletter", {
+        method: dropListStatus === "active" ? "DELETE" : "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: dropListStatus === "active"
+          ? undefined
+          : JSON.stringify({
+              email,
+              name: name.trim(),
+              source: "account-profile",
+            }),
+      });
+
+      const data = (await response.json()) as NewsletterResponse;
+
+      if (!response.ok) {
+        setDropListMessage(data.error ?? "Unable to update drop list.");
+        return;
+      }
+
+      setDropListStatus(data.subscription?.status ?? null);
+      setDropListMessage(data.message ?? "Drop list updated.");
+    } catch {
+      setDropListMessage("Unable to update drop list.");
+    } finally {
+      setDropListLoading(false);
+    }
+  };
+
   return (
     <main className="checkout-page">
       <section className="checkout-shell" aria-label="Account profile">
         <header className="checkout-header">
-          <p>ACCOUNT</p>
+          <div className="checkout-header-top">
+            <p>ACCOUNT</p>
+            <span className={`account-newsletter-chip ${dropListStatus === "active" ? "is-active" : ""}`}>
+              {dropListLabel}
+            </span>
+          </div>
           <h1>Your Profile</h1>
           <p>Manage your display name and default checkout details.</p>
         </header>
@@ -137,6 +212,18 @@ export default function ProfileClient({ initialName, initialEmail }: ProfileClie
 
         <section className="checkout-summary" aria-label="Account actions">
           <h2>Quick Links</h2>
+          <div className="checkout-row">
+            <span>Drop List</span>
+            <strong>{dropListStatus === "active" ? "Joined" : "Not joined"}</strong>
+          </div>
+          {dropListMessage && (
+            <p className={dropListStatus === "active" ? "checkout-success" : "checkout-warning"}>
+              {dropListMessage}
+            </p>
+          )}
+          <button type="button" className="checkout-link" onClick={handleDropListToggle} disabled={dropListLoading}>
+            {dropListLoading ? "Updating..." : newsletterButtonLabel(dropListStatus)}
+          </button>
           <div className="checkout-row">
             <span>Orders</span>
             <strong>

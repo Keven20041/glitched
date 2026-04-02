@@ -3,10 +3,12 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useSession } from "@/app/lib/auth-client";
 import { addCartItem, getCartCount } from "./lib/cart";
 import { catalogProducts } from "./lib/catalog";
 import RecentlyViewedRail from "./components/recently-viewed-rail";
 import { getNewsletterCtaDismissed, setNewsletterCtaDismissed } from "./lib/engagement";
+import { notifyDropListJoined } from "./lib/newsletter";
 
 type Product = {
   slug: string;
@@ -213,6 +215,7 @@ const byTopMeter = (items: Product[]) => {
 };
 
 export default function Home() {
+  const { data: session } = useSession();
   const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
   const [heroWordIndex, setHeroWordIndex] = useState(0);
   const [featuredProduct, setFeaturedProduct] = useState(0);
@@ -228,6 +231,9 @@ export default function Home() {
   const [showLeadModal, setShowLeadModal] = useState(false);
   const [leadEmail, setLeadEmail] = useState("");
   const [leadSubmitted, setLeadSubmitted] = useState(false);
+  const [leadSubmitting, setLeadSubmitting] = useState(false);
+  const [leadError, setLeadError] = useState("");
+  const [dropListStatus, setDropListStatus] = useState<string | null>(null);
   const [proofIndex, setProofIndex] = useState(0);
   const catalogSearchRef = useRef<HTMLInputElement>(null);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -512,6 +518,38 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDropListStatus = async () => {
+      if (!session?.user?.email) {
+        if (isMounted) {
+          setDropListStatus(null);
+        }
+
+        return;
+      }
+
+      const response = await fetch("/api/newsletter", { cache: "no-store" });
+      if (!response.ok || !isMounted) {
+        return;
+      }
+
+      const data = (await response.json()) as { subscription?: { status?: string } | null };
+      setDropListStatus(data.subscription?.status ?? null);
+    };
+
+    loadDropListStatus().catch(() => {
+      if (isMounted) {
+        setDropListStatus(null);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [session?.user?.email]);
+
   const liveProofMessages = useMemo(() => {
     return products.slice(0, 8).map((item, index) => {
       const sold = 7 + ((index + item.name.length) % 19);
@@ -528,19 +566,84 @@ export default function Home() {
 
   const highlightedProof = liveProofMessages[proofIndex % liveProofMessages.length];
 
-  const handleLeadSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!leadEmail.trim()) {
+  const joinDropList = async (inputEmail?: string) => {
+    const email = (inputEmail ?? session?.user?.email ?? "").trim();
+
+    if (!email) {
+      setLeadError("Add your email to join the drop list.");
       return;
     }
 
-    setLeadSubmitted(true);
-    setNewsletterCtaDismissed();
+    setLeadError("");
+    setLeadSubmitting(true);
+
+    try {
+      const response = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          name: session?.user?.name ?? "",
+          source: "drop-list",
+        }),
+      });
+
+      const data = (await response.json()) as { message?: string; error?: string };
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Unable to join the drop list.");
+      }
+
+      const message = data.message ?? "You joined the drop list.";
+      setLeadSubmitted(true);
+      setLeadEmail(email);
+      setShowLeadModal(false);
+      setNewsletterCtaDismissed();
+      setDropListStatus("active");
+      notifyDropListJoined(message);
+    } catch (error) {
+      setLeadError(error instanceof Error ? error.message : "Unable to join the drop list.");
+    } finally {
+      setLeadSubmitting(false);
+    }
+  };
+
+  const handleLeadSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    await joinDropList(leadEmail);
   };
 
   const dismissLeadModal = () => {
     setShowLeadModal(false);
     setNewsletterCtaDismissed();
+  };
+
+  const handleJoinDropListClick = async () => {
+    if (!session?.user?.email) {
+      setLeadError("");
+      setShowLeadModal(true);
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/newsletter", { cache: "no-store" });
+
+      if (response.ok) {
+        const data = (await response.json()) as { subscription?: { status?: string } | null };
+
+        if (data.subscription?.status === "active") {
+          setDropListStatus("active");
+          notifyDropListJoined("You are already subscribed to the drop list.");
+          return;
+        }
+      }
+    } catch {
+      // Fall through to the join flow if the lookup fails.
+    }
+
+    await joinDropList(session.user.email);
   };
 
   const activeMenu = openMenuIndex !== null ? navMenus[openMenuIndex] : null;
@@ -673,8 +776,13 @@ export default function Home() {
           </aside>
         )}
 
-        <button type="button" className="vertical-newsletter">
-          JOIN THE DROP LIST
+        <button
+          type="button"
+          className={`vertical-newsletter ${dropListStatus === "active" ? "is-active" : ""}`}
+          onClick={handleJoinDropListClick}
+          aria-pressed={dropListStatus === "active"}
+        >
+          {dropListStatus === "active" ? "JOINED" : "JOIN THE DROP LIST"}
         </button>
 
         <div className="hero-copy">
@@ -1069,9 +1177,14 @@ export default function Home() {
                 x
               </button>
               <p>Before You Go</p>
-              <h2>Unlock 8% Off + Pro Setup Drop Alerts</h2>
+              <h2>Join the Drop List for monthly hot-product updates</h2>
+              <p className="lead-note">Get the latest setup trends, best-selling gear, and monthly product drops.</p>
               {!leadSubmitted ? (
                 <form onSubmit={handleLeadSubmit} className="lead-form">
+                  {leadError && <p className="lead-error">{leadError}</p>}
+                  {session?.user?.email ? (
+                    <p className="lead-signed-in">Signed in as {session.user.email}. Join with one click.</p>
+                  ) : (
                   <input
                     type="email"
                     value={leadEmail}
@@ -1079,11 +1192,14 @@ export default function Home() {
                     placeholder="you@example.com"
                     required
                   />
-                  <button type="submit">Claim My Code</button>
+                  )}
+                  <button type="submit" disabled={leadSubmitting}>
+                    {leadSubmitting ? "Joining..." : "Join the Drop List"}
+                  </button>
                 </form>
               ) : (
                 <div className="lead-success">
-                  <p>Your code is ready: GLITCH8</p>
+                  <p>You&apos;re on the drop list. Monthly updates are locked in.</p>
                   <button type="button" onClick={dismissLeadModal}>
                     Keep Shopping
                   </button>
