@@ -2,7 +2,14 @@ import { Resend } from "resend";
 import { OrderReceipt } from "../emails/order-receipt";
 import React from "react";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  return new Resend(apiKey);
+}
 
 interface SendReceiptEmailParams {
   orderRef: string;
@@ -30,7 +37,8 @@ interface SendReceiptEmailParams {
 
 export async function sendReceiptEmail(params: SendReceiptEmailParams) {
   try {
-    if (!process.env.RESEND_API_KEY) {
+    const resend = getResendClient();
+    if (!resend) {
       console.warn("RESEND_API_KEY not configured, skipping email");
       return { success: false, error: "RESEND_API_KEY not set" };
     }
