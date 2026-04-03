@@ -12,6 +12,7 @@ type OrderSummary = {
   fulfillment: {
     trackingNumber: string;
     carrier: string;
+    trackingUrl?: string;
   };
 };
 
@@ -143,6 +144,16 @@ export default function OrdersClient({ userName, userEmail }: OrdersClientProps)
                     <span>Tracking</span>
                     <strong>{order.fulfillment?.trackingNumber ?? "Preparing"}</strong>
                   </div>
+                  {order.fulfillment?.trackingUrl ? (
+                    <a
+                      href={order.fulfillment.trackingUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="checkout-link"
+                    >
+                      Track Package
+                    </a>
+                  ) : null}
                 </article>
               );
             })}

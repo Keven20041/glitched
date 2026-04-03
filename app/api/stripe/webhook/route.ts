@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createFulfillmentOrder, persistFulfillmentToDatabase } from "../../../lib/fulfillment";
 import { savePurchasedOrder } from "../../../lib/orders";
+import { sendReceiptEmail } from "../../../lib/email";
 
 export const runtime = "nodejs";
 
@@ -159,6 +160,32 @@ export async function POST(request: Request) {
   });
 
   await persistFulfillmentToDatabase(purchasedOrder.purchaseId, fulfillment);
+
+  // Calculate totals for email
+  const subtotal = items.reduce((sum, item) => sum + item.unitAmount * item.quantity, 0);
+  const tax = Math.round((session.total_details?.amount_tax || 0));
+  const total = Math.round(session.amount_total || 0);
+
+  // Send receipt email
+  if (purchasedOrder.customer.email) {
+    await sendReceiptEmail({
+      orderRef: purchasedOrder.purchaseId,
+      customerName: purchasedOrder.customer.fullName,
+      customerEmail: purchasedOrder.customer.email,
+      items,
+      subtotal,
+      tax,
+      total,
+      shippingAddress: {
+        line1: purchasedOrder.customer.address,
+        city: purchasedOrder.customer.city,
+        state: purchasedOrder.customer.state,
+        postalCode: purchasedOrder.customer.postalCode,
+        country: purchasedOrder.customer.country,
+      },
+      trackingUrl: fulfillment.trackingUrl,
+    });
+  }
 
   processedSessionIds.add(session.id);
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist_Mono, Orbitron, Rajdhani } from "next/font/google";
 import { cookies } from "next/headers";
 import DropListNotification from "./components/drop-list-notification";
@@ -46,6 +47,7 @@ export default async function RootLayout({
         <CookieConsentBanner initialConsent={consentCookie} />
         <DropListNotification />
         <CartNotification />
+        <Analytics />
       </body>
     </html>
   );

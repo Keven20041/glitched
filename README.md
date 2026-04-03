@@ -62,6 +62,31 @@ Lookup endpoints:
 - `GET /api/orders?session_id=cs_test_...`
 - `GET /api/orders?purchase_id=ord_...`
 
+## EasyPost Fulfillment
+
+Use EasyPost when you want real labels and tracking without running your own warehouse software.
+
+Add these environment variables to your local `.env.local` or hosting dashboard:
+
+```bash
+FULFILLMENT_MODE=easypost
+EASYPOST_API_KEY=ep_test_or_live_key_here
+FULFILLMENT_FROM_NAME=Your Store
+FULFILLMENT_FROM_LINE1=123 Warehouse St
+FULFILLMENT_FROM_CITY=Your City
+FULFILLMENT_FROM_STATE=CA
+FULFILLMENT_FROM_ZIP=90001
+FULFILLMENT_FROM_COUNTRY=US
+```
+
+Then restart the app and place a Stripe test order. When the Stripe webhook fires, the app will send the paid order to EasyPost, store the tracking data, and show it on the success page and in the account orders page.
+
+Notes:
+
+- Keep `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` pointed at your Stripe test account while testing.
+- EasyPost needs a valid sender address even in test mode.
+- If EasyPost returns a label URL, the app will expose a Track Package link in the UI.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

@@ -32,6 +32,7 @@ export type FulfillmentOrderResult = {
   mode: "mock" | "easypost" | "shipbob";
   externalOrderId: string;
   trackingNumber: string;
+  trackingUrl?: string;
   carrier: string;
   status: "submitted" | "processing" | "shipped" | "delivered";
   createdAt: string;
@@ -111,14 +112,55 @@ const createEasyPostShipment = async (
     rates?: Array<{ id?: string; service?: string; rate?: string; carrier?: string }>;
   };
 
-  const trackingNumber = data.id ?? `EP-${Date.now()}`;
-  const labelUrl = data.postage_label?.label_download?.href;
+  const shipmentId = data.id;
+  const selectedRate =
+    data.rates?.slice().sort((left, right) => Number(left.rate ?? Number.POSITIVE_INFINITY) - Number(right.rate ?? Number.POSITIVE_INFINITY))[0] ?? null;
+
+  if (!shipmentId || !selectedRate?.id) {
+    throw new Error("EasyPost shipment did not return a purchasable rate.");
+  }
+
+  const purchaseResponse = await fetch(`https://api.easypost.com/v2/shipments/${shipmentId}/buy`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      rate: {
+        id: selectedRate.id,
+      },
+    }),
+  });
+
+  if (!purchaseResponse.ok) {
+    const error = await purchaseResponse.json();
+    throw new Error(`EasyPost purchase error: ${JSON.stringify(error)}`);
+  }
+
+  const purchased = (await purchaseResponse.json()) as {
+    tracking_code?: string;
+    tracker?: {
+      public_url?: string;
+      carrier?: string;
+      tracking_code?: string;
+    };
+    postage_label?: {
+      label_url?: string;
+      label_pdf_url?: string | null;
+    };
+  };
+
+  const trackingNumber = purchased.tracking_code ?? purchased.tracker?.tracking_code ?? `EP-${Date.now()}`;
+  const trackingUrl = purchased.tracker?.public_url;
+  const labelUrl = purchased.postage_label?.label_pdf_url ?? purchased.postage_label?.label_url;
 
   return {
     mode: "easypost",
-    externalOrderId: data.id || `order_${input.orderRef}`,
+    externalOrderId: shipmentId || `order_${input.orderRef}`,
     trackingNumber,
-    carrier: "USPS/UPS/FedEx",
+    trackingUrl,
+    carrier: purchased.tracker?.carrier ?? selectedRate.carrier ?? "EasyPost",
     status: "submitted",
     createdAt: new Date().toISOString(),
     label_download_url: labelUrl,
@@ -177,6 +219,7 @@ const createShipBobShipment = async (
     mode: "shipbob",
     externalOrderId: `${data.order_id || input.orderRef}`,
     trackingNumber,
+    trackingUrl: undefined,
     carrier: "ShipBob",
     status: "submitted",
     createdAt: new Date().toISOString(),
@@ -239,7 +282,11 @@ export const persistFulfillmentToDatabase = async (
     tracking_number: fulfillment.trackingNumber,
     carrier: fulfillment.carrier,
     status: fulfillment.status === "submitted" ? "pending" : fulfillment.status,
-    carrier_response: { mode: fulfillment.mode },
+    carrier_response: {
+      mode: fulfillment.mode,
+      trackingUrl: fulfillment.trackingUrl ?? null,
+      label_download_url: fulfillment.label_download_url ?? null,
+    },
   });
 
   if (error) {

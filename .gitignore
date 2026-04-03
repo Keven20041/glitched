@@ -48,6 +48,39 @@ supabase/.branches/
 
 # OS
 .vscode/settings.json
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Sensitive files
+*.json.local
+*.secret*
+.env*.json
+supabase/seed.json
+firebase-key.json
+
+# Database & backups
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+db_backup/
+
+# Uploads & temp files
+/public/uploads/
+/tmp/
+/temp/
+.cache/
+
+# Testing & local data
+/test-data/
+*.test.json
 *.swp
 *.swo
 *~

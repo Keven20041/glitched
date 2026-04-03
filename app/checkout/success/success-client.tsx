@@ -17,6 +17,8 @@ type TrackedOrder = {
     trackingNumber: string;
     externalOrderId: string;
     carrier: string;
+    status: string;
+    trackingUrl?: string;
   };
 };
 
@@ -74,20 +76,32 @@ function CheckoutSuccessContent() {
         <section className="checkout-summary">
           <div className="checkout-row">
             <span>Purchase ID</span>
-            <strong>{order?.purchaseId ?? "Pending webhook"}</strong>
-          </div>
-          <div className="checkout-row">
-            <span>Session</span>
-            <strong>{sessionId ?? "Unavailable"}</strong>
+            <strong>{order?.purchaseId ?? "Order received"}</strong>
           </div>
           <div className="checkout-row">
             <span>Tracking</span>
-            <strong>{order?.fulfillment.trackingNumber ?? "Preparing"}</strong>
+            <strong>{order?.fulfillment.trackingNumber ?? "Waiting for shipment"}</strong>
           </div>
           <div className="checkout-row">
-            <span>Customer</span>
-            <strong>{order?.customer.fullName ?? "Pending webhook"}</strong>
+            <span>Carrier</span>
+            <strong>{order?.fulfillment.carrier ?? "Not assigned yet"}</strong>
           </div>
+          <div className="checkout-row">
+            <span>Shipment Status</span>
+            <strong>{order?.fulfillment.status ?? "Being prepared"}</strong>
+          </div>
+          {order?.fulfillment.trackingUrl ? (
+            <a
+              href={order.fulfillment.trackingUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="checkout-link"
+            >
+              Track Package
+            </a>
+          ) : (
+            <p>Tracking will appear here once your shipment is handed off.</p>
+          )}
           <Link href="/" className="checkout-link">
             Return To Store
           </Link>
