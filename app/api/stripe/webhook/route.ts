@@ -66,6 +66,13 @@ export async function POST(request: Request) {
 
   const session = event.data.object as Stripe.Checkout.Session;
 
+  console.log("[stripe-webhook] checkout.session.completed received", {
+    eventId: event.id,
+    eventType: event.type,
+    sessionId: session.id,
+    livemode: event.livemode,
+  });
+
   if (!session.id) {
     return NextResponse.json({ error: "Missing checkout session id." }, { status: 400 });
   }
@@ -167,8 +174,15 @@ export async function POST(request: Request) {
   const total = Math.round(session.amount_total || 0);
 
   // Send receipt email
+  console.log("[stripe-webhook] customer email detection", {
+    purchaseId: purchasedOrder.purchaseId,
+    orderRef,
+    hasCustomerEmail: Boolean(purchasedOrder.customer.email),
+    customerEmail: purchasedOrder.customer.email ?? null,
+  });
+
   if (purchasedOrder.customer.email) {
-    await sendReceiptEmail({
+    const emailResult = await sendReceiptEmail({
       orderRef: purchasedOrder.purchaseId,
       customerName: purchasedOrder.customer.fullName,
       customerEmail: purchasedOrder.customer.email,
@@ -184,6 +198,19 @@ export async function POST(request: Request) {
         country: purchasedOrder.customer.country,
       },
       trackingUrl: fulfillment.trackingUrl,
+    });
+
+    console.log("[stripe-webhook] receipt email send result", {
+      purchaseId: purchasedOrder.purchaseId,
+      orderRef,
+      success: emailResult.success,
+      emailId: emailResult.success ? emailResult.emailId ?? null : null,
+      error: emailResult.success ? null : String(emailResult.error ?? "unknown_error"),
+    });
+  } else {
+    console.warn("[stripe-webhook] receipt email skipped: missing customer email", {
+      purchaseId: purchasedOrder.purchaseId,
+      orderRef,
     });
   }
 

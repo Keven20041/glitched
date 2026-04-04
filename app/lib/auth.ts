@@ -17,6 +17,36 @@ const normalizeConnectionString = (value: string) => {
   }
 };
 
+const getTrustedOrigins = (baseURL: string) => {
+  const origins = new Set<string>();
+
+  try {
+    origins.add(new URL(baseURL).origin);
+  } catch {
+    // Ignore invalid URLs here; auth() already validates baseURL separately.
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    origins.add("http://localhost:*");
+    origins.add("https://localhost:*");
+    origins.add("http://127.0.0.1:*");
+    origins.add("https://127.0.0.1:*");
+    origins.add("http://[::1]:*");
+    origins.add("https://[::1]:*");
+  }
+
+  if (process.env.BETTER_AUTH_TRUSTED_ORIGINS) {
+    for (const origin of process.env.BETTER_AUTH_TRUSTED_ORIGINS.split(",")) {
+      const trimmedOrigin = origin.trim();
+      if (trimmedOrigin) {
+        origins.add(trimmedOrigin);
+      }
+    }
+  }
+
+  return [...origins];
+};
+
 function getAuth(): ReturnType<typeof betterAuth> {
   if (globalThis.__betterAuth) {
     return globalThis.__betterAuth;
@@ -62,6 +92,7 @@ function getAuth(): ReturnType<typeof betterAuth> {
   const auth = betterAuth({
     baseURL,
     secret,
+    trustedOrigins: getTrustedOrigins(baseURL),
     database: pool,
     emailAndPassword: {
       enabled: true,

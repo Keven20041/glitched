@@ -1,6 +1,5 @@
 import { Resend } from "resend";
 import { OrderReceipt } from "../emails/order-receipt";
-import React from "react";
 
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
@@ -36,33 +35,32 @@ interface SendReceiptEmailParams {
 }
 
 export async function sendReceiptEmail(params: SendReceiptEmailParams) {
-  try {
-    const resend = getResendClient();
-    if (!resend) {
-      console.warn("RESEND_API_KEY not configured, skipping email");
-      return { success: false, error: "RESEND_API_KEY not set" };
-    }
-
-    const fromEmail = process.env.RESEND_FROM_EMAIL || "orders@glitched.store";
-
-    const emailComponent = React.createElement(OrderReceipt, params);
-
-    const result = await resend.emails.send({
-      from: fromEmail,
-      to: params.customerEmail,
-      subject: `Order Confirmation #${params.orderRef} - GLITCHED`,
-      react: emailComponent,
-    });
-
-    if (result.error) {
-      console.error("Failed to send receipt email:", result.error);
-      return { success: false, error: result.error };
-    }
-
-    console.log("Receipt email sent:", result.data?.id);
-    return { success: true, emailId: result.data?.id };
-  } catch (error) {
-    console.error("Error sending receipt email:", error);
-    return { success: false, error: String(error) };
+  const resend = getResendClient();
+  if (!resend) {
+    console.warn("RESEND_API_KEY not configured, skipping email");
+    return { success: false, error: "RESEND_API_KEY not set" };
   }
+
+  const fromEmail = process.env.RESEND_FROM_EMAIL || "orders@glitched.store";
+
+  const result = await resend.emails.send({
+    from: fromEmail,
+    to: [params.customerEmail],
+    subject: `Order Confirmation #${params.orderRef} - GLITCHED`,
+    react: OrderReceipt(params),
+    tags: [
+      { name: "category", value: "order_receipt" },
+      { name: "order_ref", value: params.orderRef },
+    ],
+  }, {
+    idempotencyKey: `order-receipt/${params.orderRef}`,
+  });
+
+  if (result.error) {
+    console.error("Failed to send receipt email:", result.error);
+    return { success: false, error: result.error };
+  }
+
+  console.log("Receipt email sent:", result.data?.id);
+  return { success: true, emailId: result.data?.id };
 }
