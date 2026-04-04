@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import DropListNotification from "./components/drop-list-notification";
 import CookieConsentBanner from "./components/cookie-consent-banner";
 import SiteNavigation from "./components/site-navigation";
+import SiteFooter from "./components/site-footer";
 import CartNotification from "./components/cart-notification";
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default async function RootLayout({
       <body suppressHydrationWarning className="min-h-full flex flex-col">
         <SiteNavigation />
         {children}
+        <SiteFooter />
         <CookieConsentBanner initialConsent={consentCookie} />
         <DropListNotification />
         <CartNotification />
