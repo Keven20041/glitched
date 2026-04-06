@@ -9,6 +9,13 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   if (typeof error === "object" && error !== null) {
     const maybeMessage = (error as { message?: unknown }).message;
     if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      const lowerMessage = maybeMessage.toLowerCase();
+      
+      // Detect wrong password/invalid credentials
+      if (lowerMessage.includes("invalid") || lowerMessage.includes("incorrect") || lowerMessage.includes("wrong")) {
+        return "Invalid email or password. Please try again.";
+      }
+      
       return maybeMessage;
     }
   }
@@ -49,7 +56,18 @@ export default function LoginClient() {
       const result = response as { error?: { message?: string } | null };
 
       if (result?.error?.message) {
-        setError(result.error.message);
+        const errorMessage = result.error.message;
+        const lowerMessage = errorMessage.toLowerCase();
+        
+        // Provide specific error messages
+        if (lowerMessage.includes("invalid") || lowerMessage.includes("incorrect") || lowerMessage.includes("wrong")) {
+          setError("Invalid email or password. Please try again.");
+        } else if (lowerMessage.includes("not found") || lowerMessage.includes("user")) {
+          setError("No account found with this email address.");
+        } else {
+          setError(errorMessage);
+        }
+        
         setIsSubmitting(false);
         return;
       }

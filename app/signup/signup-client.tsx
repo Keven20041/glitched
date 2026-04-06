@@ -96,6 +96,8 @@ export default function SignupClient() {
     const formData = new FormData(event.currentTarget);
     const password = String(formData.get("password") ?? "");
     const confirmPassword = String(formData.get("confirmPassword") ?? "");
+    const email = String(formData.get("email") ?? "").trim().toLowerCase();
+    const name = String(formData.get("name") ?? "").trim();
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -104,9 +106,27 @@ export default function SignupClient() {
     }
 
     try {
+      // Check if there's an existing newsletter subscription for this email
+      let previouslyOnDropList = false;
+      try {
+        const checkResponse = await fetch("/api/newsletter", {
+          method: "GET",
+          cache: "no-store",
+        });
+        
+        if (checkResponse.ok) {
+          const data = (await checkResponse.json()) as { subscription?: { status?: string } | null };
+          if (data.subscription?.status === "active") {
+            previouslyOnDropList = true;
+          }
+        }
+      } catch {
+        // If check fails, continue with signup without droplist status
+      }
+
       const response = await signUp.email({
-        name: String(formData.get("name") ?? ""),
-        email: String(formData.get("email") ?? ""),
+        name,
+        email,
         password,
       });
 
@@ -116,6 +136,25 @@ export default function SignupClient() {
         setError(result.error.message);
         setIsSubmitting(false);
         return;
+      }
+
+      // If user was previously on the droplist, re-add them
+      if (previouslyOnDropList) {
+        try {
+          await fetch("/api/newsletter", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email,
+              name,
+              source: "signup-preserve",
+            }),
+          });
+        } catch {
+          // Silently continue if re-adding to droplist fails
+        }
       }
 
       router.replace(nextPath);
